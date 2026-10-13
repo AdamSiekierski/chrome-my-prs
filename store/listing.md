@@ -36,6 +36,7 @@ What it does:
 
 Setup: paste a GitHub personal access token (classic, repo scope), or click "Sign in with GitHub" and approve a code.
 
+GitHub repo: https://github.com/AdamSiekierski/chrome-my-prs
 Privacy policy: https://github.com/AdamSiekierski/chrome-my-prs/blob/master/PRIVACY.md
 ```
 
