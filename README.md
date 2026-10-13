@@ -19,7 +19,7 @@ create one at <https://github.com/settings/applications/new> (any homepage/callb
 **Enable Device Flow**, and swap the id. If your org restricts third-party apps, an org owner has to
 approve the app once, or use a pasted token instead: a token reaches every repo you can.
 
-Pasted token (fallback): a classic token with `repo` scope (private repos), or a fine-grained token with
+Pasted token (fallback): a [classic token with `repo` scope](https://github.com/settings/tokens/new?scopes=repo&description=My%20PRs%20Tab%20Group) (private repos), or a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with
 Pull requests + Metadata read-only on the repos you work in. If your org enforces SAML SSO,
 authorize the token for it, or those PRs silently won't appear in search.
 
