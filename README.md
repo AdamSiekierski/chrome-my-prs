@@ -4,14 +4,20 @@ A Chrome extension that keeps one tab group filled with every open GitHub pull r
 
 ## Install
 
-1. Unzip, open `chrome://extensions`, turn on **Developer mode**.
-2. **Load unpacked** → pick this folder. The settings page opens on first install.
+```sh
+git clone https://github.com/AdamSiekierski/chrome-my-prs.git
+```
+
+1. Open `chrome://extensions` and turn on **Developer mode**.
+2. **Load unpacked** → pick the `chrome-my-prs` folder. The settings page opens on first install.
 3. Press **Sign in with GitHub**, approve the code on the github.com tab that opens. Done.
 
-Sign-in needs an OAuth App client id, one-time: create one at
-<https://github.com/settings/applications/new> (any homepage/callback URL), tick **Enable Device Flow**,
-and put its Client ID in `GITHUB_CLIENT_ID` in `lib/shared.js`. If your org restricts third-party apps,
-an org owner has to approve it once, or use a pasted token instead.
+To update: `git pull`, then press the reload icon on the extension's card in `chrome://extensions`.
+
+Sign-in uses the OAuth App whose Client ID is in `GITHUB_CLIENT_ID` in `lib/shared.js`. To use your own,
+create one at <https://github.com/settings/applications/new> (any homepage/callback URL), tick
+**Enable Device Flow**, and swap the id. If your org restricts third-party apps, an org owner has to
+approve the app once, or use a pasted token instead: a token reaches every repo you can.
 
 Pasted token (fallback): a classic token with `repo` scope (private repos), or a fine-grained token with
 Pull requests + Metadata read-only on the repos you work in. If your org enforces SAML SSO,
