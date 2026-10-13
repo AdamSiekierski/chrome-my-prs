@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>My PRs Tab Group settings</title>
+  <link rel="stylesheet" href="ui.css">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main class="page">
+    <header class="head">
+      <h1>My PRs Tab Group</h1>
+      <p>Keeps one tab group filled with the open pull requests you authored on GitHub. Merged and closed PRs leave the group on the next sync.</p>
+    </header>
+
+    <form id="form">
+      <section>
+        <h2>GitHub access</h2>
+        <label for="token">Personal access token</label>
+        <div class="inline">
+          <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_… or github_pat_…">
+          <button type="button" class="btn" id="reveal">Show</button>
+          <button type="button" class="btn" id="check">Check token</button>
+        </div>
+        <p class="hint" id="token-status" role="status"></p>
+        <p class="hint">
+          <a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=My%20PRs%20Tab%20Group" target="_blank" rel="noopener">Create a classic token</a>
+          with the <code>repo</code> scope, which covers private repos. A fine-grained token works too: give it the repositories you work in, with Pull requests and Metadata set to read-only.
+          If your org uses SAML SSO, authorize the token for that org on GitHub, or its PRs won't show up.
+        </p>
+        <p class="hint">The token is kept in this browser's local extension storage and is sent only to api.github.com.</p>
+      </section>
+
+      <section>
+        <h2>Tab group</h2>
+        <label for="groupTitle">Group name</label>
+        <input id="groupTitle" type="text" maxlength="40">
+        <p class="hint">The extension finds its group by this name after Chrome restarts, so keep it unique.</p>
+
+        <fieldset>
+          <legend>Color</legend>
+          <div class="swatches" id="swatches"></div>
+        </fieldset>
+      </section>
+
+      <section>
+        <h2>Which pull requests</h2>
+        <label class="check"><input id="includeDrafts" type="checkbox"> Include draft PRs</label>
+
+        <label for="extraQuery">Extra search filter</label>
+        <input id="extraQuery" type="text" spellcheck="false" placeholder="org:my-company -repo:me/dotfiles">
+        <p class="hint">Added to <code>is:pr is:open author:@me</code>. Any <a href="https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests" target="_blank" rel="noopener">GitHub search qualifier</a> works.</p>
+
+        <label for="pollMinutes">Check GitHub every</label>
+        <div class="inline narrow">
+          <input id="pollMinutes" type="number" min="1" max="60" step="1">
+          <span>minutes</span>
+        </div>
+      </section>
+
+      <div class="save-row">
+        <button type="submit" class="btn primary">Save changes</button>
+        <span id="saved" role="status"></span>
+      </div>
+    </form>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

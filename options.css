@@ -1,0 +1,35 @@
+.page { max-width: 600px; margin: 0 auto; padding: 40px 24px 64px; }
+.head { border-bottom: 3px solid var(--group); padding-bottom: 16px; margin-bottom: 8px; }
+h1 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
+.head p { margin: 0; color: var(--muted); max-width: 60ch; }
+section { padding: 20px 0 8px; border-bottom: 1px solid var(--line); }
+h2 { font-size: 15px; margin: 0 0 14px; }
+label, legend { display: block; font-weight: 600; margin: 14px 0 6px; }
+section > label:first-of-type { margin-top: 0; }
+input[type="text"], input[type="password"], input[type="number"] {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--line);
+  border-radius: var(--radius-m); background: var(--surface);
+}
+input:focus { outline: 2px solid var(--group); outline-offset: -1px; border-color: transparent; }
+.inline { display: flex; gap: 6px; align-items: center; }
+.inline input { flex: 1; }
+.inline.narrow input { flex: none; width: 80px; }
+.hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; max-width: 70ch; }
+.hint.ok { color: #188038; }
+.hint.err { color: var(--danger); }
+code { font-size: 12px; background: var(--hover); padding: 1px 4px; border-radius: var(--radius-s); }
+a { color: inherit; text-decoration-color: var(--group); text-underline-offset: 2px; }
+fieldset { border: 0; padding: 0; margin: 0; }
+.check { display: flex; gap: 8px; align-items: center; font-weight: 400; margin: 0 0 4px; }
+.check input { accent-color: var(--group); margin: 0; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch { position: relative; }
+.swatch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.swatch span {
+  display: block; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--c); border: 3px solid var(--bg); box-shadow: 0 0 0 1px var(--line);
+}
+.swatch input:checked + span { box-shadow: 0 0 0 2px var(--c); }
+.swatch input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+.save-row { display: flex; gap: 12px; align-items: center; padding-top: 20px; }
+#saved { color: var(--muted); }

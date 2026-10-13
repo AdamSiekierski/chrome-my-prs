@@ -1,0 +1,42 @@
+:root {
+  --bg: #F6F7F9;
+  --surface: #FFFFFF;
+  --ink: #1F2328;
+  --muted: #646D78;
+  --line: #E0E3E8;
+  --hover: #ECEFF3;
+  --danger: #C62828;
+  --group: #A142F4;
+  --radius-s: 4px;
+  --radius-m: 7px;
+  color-scheme: light dark;
+  font: 13px/1.45 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1D1F23;
+    --surface: #26292E;
+    --ink: #E5E7EA;
+    --muted: #9BA2AB;
+    --line: #363A41;
+    --hover: #2F3339;
+    --danger: #FF8A80;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--group); outline-offset: 2px; }
+.btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius-m);
+  padding: 6px 12px;
+}
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--group); border-color: var(--group); color: #fff; font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.08); }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
