@@ -1,4 +1,4 @@
-import { DEFAULTS, COLOR_HEX, getSettings, getViewer } from './lib/shared.js';
+import { DEFAULTS, COLOR_HEX, getSettings, getViewer, deviceLogin } from './lib/shared.js';
 
 const $ = (id) => document.getElementById(id);
 const form = $('form');
@@ -54,6 +54,30 @@ $('check').addEventListener('click', async () => {
   } catch (e) {
     status.textContent = e.message;
     status.classList.add('err');
+  }
+});
+
+$('signin').addEventListener('click', async () => {
+  const btn = $('signin');
+  const status = $('signin-status');
+  status.className = 'hint';
+  btn.disabled = true;
+  try {
+    const token = await deviceLogin(({ user_code, verification_uri }) => {
+      navigator.clipboard.writeText(user_code).catch(() => {});
+      status.textContent = `Enter code ${user_code} on GitHub (copied to clipboard). Waiting…`;
+      chrome.tabs.create({ url: verification_uri });
+    });
+    const user = await getViewer(token);
+    await chrome.storage.local.set({ token }); // background picks this up and syncs
+    $('token').value = token;
+    status.textContent = `Signed in as @${user.login}. Syncing now.`;
+    status.classList.add('ok');
+  } catch (e) {
+    status.textContent = e.message;
+    status.classList.add('err');
+  } finally {
+    btn.disabled = false;
   }
 });
 

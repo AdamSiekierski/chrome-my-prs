@@ -16,7 +16,14 @@
     <form id="form">
       <section>
         <h2>GitHub access</h2>
-        <label for="token">Personal access token</label>
+        <div class="inline">
+          <button type="button" class="btn primary" id="signin">Sign in with GitHub</button>
+        </div>
+        <p class="hint" id="signin-status" role="status"></p>
+        <p class="hint">Opens github.com in a new tab, where you're already signed in. Approve the code shown here and you're done.</p>
+        <p class="hint">If an org limits third-party apps, its PRs stay hidden until an org owner approves the app. A personal access token below has no such limit: it reaches every repo you can.</p>
+
+        <label for="token">Or paste a personal access token</label>
         <div class="inline">
           <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_… or github_pat_…">
           <button type="button" class="btn" id="reveal">Show</button>
@@ -28,7 +35,7 @@
           with the <code>repo</code> scope, which covers private repos. A fine-grained token works too: give it the repositories you work in, with Pull requests and Metadata set to read-only.
           If your org uses SAML SSO, authorize the token for that org on GitHub, or its PRs won't show up.
         </p>
-        <p class="hint">The token is kept in this browser's local extension storage and is sent only to api.github.com.</p>
+        <p class="hint">Either way, the token is kept in this browser's local extension storage and is sent only to api.github.com.</p>
       </section>
 
       <section>

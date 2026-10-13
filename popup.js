@@ -88,8 +88,8 @@ async function render() {
   if (!settings.token) {
     status.textContent = '';
     list.replaceChildren(emptyState(
-      'Add a GitHub token so the extension can find the pull requests you opened.',
-      'Add token',
+      'Sign in to GitHub so the extension can find the pull requests you opened.',
+      'Sign in',
       () => chrome.runtime.openOptionsPage(),
     ));
     $('hidden-wrap').hidden = true;
@@ -99,6 +99,10 @@ async function render() {
   if (prCache?.error) {
     status.classList.add('error');
     status.textContent = prCache.error;
+  } else if (prCache?.blockedOrgs?.length) {
+    status.classList.add('error');
+    status.textContent = `${prCache.blockedOrgs.join(', ')} blocks this extension, so its PRs are missing. `
+      + 'Ask an org owner to approve "My PRs", or paste a personal access token in settings: it reaches every repo you can.';
   } else if (prCache?.fetchedAt) {
     status.textContent = `Synced ${timeAgo(prCache.fetchedAt)}${settings.enabled ? '' : '. Paused, tabs stay as they are.'}`;
   } else {

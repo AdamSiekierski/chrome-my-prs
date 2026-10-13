@@ -1,4 +1,4 @@
-import { getSettings, getHidden, setHidden, fetchMyPRs, prKeyFromUrl, COLOR_HEX } from './lib/shared.js';
+import { getSettings, getHidden, setHidden, fetchMyPRs, findBlockedOrgs, prKeyFromUrl, COLOR_HEX } from './lib/shared.js';
 
 const ALARM = 'my-prs-sync';
 const MENU_ID = 'my-prs-hide';
@@ -40,7 +40,7 @@ async function doSync({ refetch }) {
   const settings = await getSettings();
 
   if (!settings.token) {
-    await badge('!', ERROR_RED, 'My PRs: add a GitHub token in settings');
+    await badge('!', ERROR_RED, 'My PRs: sign in to GitHub in settings');
     return;
   }
 
@@ -48,8 +48,8 @@ async function doSync({ refetch }) {
 
   if (refetch || !prCache?.fetchedAt) {
     try {
-      const prs = await fetchMyPRs(settings);
-      prCache = { prs, fetchedAt: Date.now(), error: null };
+      const [prs, blockedOrgs] = await Promise.all([fetchMyPRs(settings), findBlockedOrgs(settings.token)]);
+      prCache = { prs, blockedOrgs, fetchedAt: Date.now(), error: null };
       await chrome.storage.local.set({ prCache });
       await pruneHidden(prs);
     } catch (e) {
@@ -71,8 +71,8 @@ async function doSync({ refetch }) {
   await reconcileGroup(settings, wanted);
   await badge(
     wanted.size ? String(wanted.size) : '',
-    prCache.error ? ERROR_RED : COLOR_HEX[settings.groupColor],
-    `My PRs: ${wanted.size} open`,
+    prCache.error || prCache.blockedOrgs?.length ? ERROR_RED : COLOR_HEX[settings.groupColor],
+    prCache.blockedOrgs?.length ? `My PRs: can't see ${prCache.blockedOrgs.join(', ')}` : `My PRs: ${wanted.size} open`,
   );
 }
 

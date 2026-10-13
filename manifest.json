@@ -5,7 +5,7 @@
   "description": "Keeps a Chrome tab group open with every open GitHub pull request you authored.",
   "minimum_chrome_version": "120",
   "permissions": ["tabs", "tabGroups", "storage", "alarms", "contextMenus"],
-  "host_permissions": ["https://api.github.com/*"],
+  "host_permissions": ["https://api.github.com/*", "https://github.com/login/*"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": {
     "default_title": "My PRs",
