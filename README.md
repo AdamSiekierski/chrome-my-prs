@@ -49,7 +49,3 @@ that restrict third-party apps hide their PRs until an org owner approves the ap
 - `background.js`: sync loop, tab group reconciliation, context menu
 - `lib/shared.js`: settings, GitHub API, PR URL parsing
 - `popup.*`, `options.*`, `ui.css`: UI
-
----
-
-Generated with [Clanker](https://claude.com/claude-code)
