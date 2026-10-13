@@ -1,14 +1,9 @@
-# master → beta listing (trusted testers), GitHub release → public listing. Setup: docs/publishing.md
+# GitHub release vX.Y.Z → Chrome Web Store. Setup: docs/publishing.md
 name: Publish to Chrome Web Store
 
 on:
-  push:
-    branches: [master]
-    paths: [manifest.json, '*.js', '*.html', '*.css', 'icons/**', 'lib/**']
   release:
     types: [published]
-
-concurrency: publish-${{ github.event_name }}
 
 permissions:
   contents: write # attach the zip to the release
@@ -17,42 +12,31 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     env:
-      BETA: ${{ github.event_name == 'push' }}
-      EXTENSION_ID: ${{ github.event_name == 'push' && secrets.CWS_BETA_EXTENSION_ID || secrets.CWS_EXTENSION_ID }}
+      TAG: ${{ github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set version
-        env:
-          TAG: ${{ github.event.release.tag_name }}
-          RUN: ${{ github.run_number }}
+      - name: Check version
         run: |
           version=$(jq -r .version manifest.json)
-          if [ "$BETA" = true ]; then
-            # Store versions must only go up: X.Y.Z.<run> sorts above X.Y.Z and above earlier betas.
-            jq --arg v "$version.$RUN" --arg n "$version beta $RUN" \
-              '.version = $v | .version_name = $n | .name += " (Beta)"' manifest.json > m && mv m manifest.json
-          elif [ "${TAG#v}" != "$version" ]; then
+          if [ "${TAG#v}" != "$version" ]; then
             echo "::error::Release tag $TAG doesn't match manifest.json version $version. Bump manifest.json first."
             exit 1
           fi
-          jq -r '"\(.name) \(.version)"' manifest.json
 
       - name: Zip
         run: zip -r extension.zip manifest.json *.js *.html *.css icons lib
 
       - name: Attach zip to release
-        if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" extension.zip --clobber
+        run: gh release upload "$TAG" extension.zip --clobber
 
       - name: Upload and publish
-        if: env.EXTENSION_ID != '' # skipped until the store listing exists and secrets are set
         uses: mnao305/chrome-extension-upload@f549d5d654694a7722d6abfa64c97409ad5e64c1 # v7.0.0
         with:
           file-path: extension.zip
-          extension-id: ${{ env.EXTENSION_ID }}
+          extension-id: ${{ secrets.CWS_EXTENSION_ID }}
           publisher-id: ${{ secrets.CWS_PUBLISHER_ID }}
           client-id: ${{ secrets.CWS_CLIENT_ID }}
           client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
