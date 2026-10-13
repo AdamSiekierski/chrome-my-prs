@@ -21,7 +21,7 @@
         </div>
         <p class="hint" id="signin-status" role="status"></p>
         <p class="hint">Opens github.com in a new tab, where you're already signed in. Approve the code shown here and you're done.</p>
-        <p class="hint">If an org limits third-party apps, its PRs stay hidden until an org owner approves the app. A personal access token below has no such limit: it reaches every repo you can.</p>
+        <p class="hint">If an org limits third-party apps, its PRs stay hidden until an org owner approves the app. A <a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=My%20PRs%20Tab%20Group" target="_blank" rel="noopener">personal access token</a> has no such limit: it reaches every repo you can. Paste it below.</p>
 
         <label for="token">Or paste a personal access token</label>
         <div class="inline">
@@ -32,7 +32,7 @@
         <p class="hint" id="token-status" role="status"></p>
         <p class="hint">
           <a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=My%20PRs%20Tab%20Group" target="_blank" rel="noopener">Create a classic token</a>
-          with the <code>repo</code> scope, which covers private repos. A fine-grained token works too: give it the repositories you work in, with Pull requests and Metadata set to read-only.
+          with the <code>repo</code> scope, which covers private repos. A <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a> works too: give it the repositories you work in, with Pull requests and Metadata set to read-only.
           If your org uses SAML SSO, authorize the token for that org on GitHub, or its PRs won't show up.
         </p>
         <p class="hint">Either way, the token is kept in this browser's local extension storage and is sent only to api.github.com.</p>
