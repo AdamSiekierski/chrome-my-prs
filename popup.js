@@ -139,3 +139,4 @@ $('enabled').addEventListener('change', (e) => chrome.storage.local.set({ enable
 
 chrome.storage.onChanged.addListener(render);
 render();
+$('sync').click(); // refetch on every popup open; the spinner shows it's working
