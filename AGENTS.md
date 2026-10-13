@@ -31,17 +31,11 @@ accept the new permission**. Call this out to the user before releasing, and add
 
 Versions must be strictly higher than the one in the store, or the upload is rejected. Never reuse or lower one.
 
-### 2. Bump in a PR
+### 2. Bump the version
 
-```sh
-git checkout -b release-X.Y.Z origin/master
-# edit only the "version" field in manifest.json; keep the file's compact formatting (don't pipe it through jq)
-git commit -am "Release vX.Y.Z"
-git push -u origin release-X.Y.Z
-gh pr create --base master --title "Release vX.Y.Z" --body "<summary of user-facing changes since the last tag>"
-```
-
-Wait for it to be merged (ask the user; don't merge it yourself unless told to).
+Change only the `"version"` field in `manifest.json` and keep the file's compact formatting (don't pipe it through
+jq). If you're also making the changes being released, put the bump in the same PR as those changes, not a separate
+one. The release can only be created once that PR is merged to master.
 
 ### 3. Create the release
 
