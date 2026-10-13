@@ -32,6 +32,7 @@ What it does:
 • One GitHub search covers all your repos: personal, org, private.
 • Hide a PR from the popup, or right-click a PR page → "Hide from My PRs group". Hides sync across your browsers.
 • Optional extra search filter (e.g. org:my-company), draft toggle, group name and color.
+• Optionally split PRs into one tab group per repository.
 • Pause syncing any time from the popup.
 
 Setup: paste a GitHub personal access token (classic, repo scope), or click "Sign in with GitHub" and approve a code.

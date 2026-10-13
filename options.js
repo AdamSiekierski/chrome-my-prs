@@ -23,6 +23,7 @@ async function load() {
   const s = await getSettings();
   $('token').value = s.token;
   $('groupTitle').value = s.groupTitle;
+  $('groupByRepo').checked = s.groupByRepo;
   $('includeDrafts').checked = s.includeDrafts;
   $('extraQuery').value = s.extraQuery;
   $('pollMinutes').value = s.pollMinutes;
@@ -88,6 +89,7 @@ form.addEventListener('submit', async (e) => {
     token: $('token').value.trim(),
     groupTitle: $('groupTitle').value.trim() || DEFAULTS.groupTitle,
     groupColor: form.querySelector('input[name="groupColor"]:checked')?.value ?? DEFAULTS.groupColor,
+    groupByRepo: $('groupByRepo').checked,
     includeDrafts: $('includeDrafts').checked,
     extraQuery: $('extraQuery').value.trim(),
     pollMinutes: Number.isFinite(poll) ? Math.min(60, Math.max(1, poll)) : DEFAULTS.pollMinutes,
