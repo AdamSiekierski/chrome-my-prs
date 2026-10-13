@@ -40,7 +40,7 @@ async function doSync({ refetch }) {
   const settings = await getSettings();
 
   if (!settings.token) {
-    await badge('!', ERROR_RED, 'My PRs: sign in to GitHub in settings');
+    await badge('!', ERROR_RED, 'My PRs: add a GitHub token in settings');
     return;
   }
 

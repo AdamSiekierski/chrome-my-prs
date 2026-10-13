@@ -88,8 +88,8 @@ async function render() {
   if (!settings.token) {
     status.textContent = '';
     list.replaceChildren(emptyState(
-      'Sign in to GitHub so the extension can find the pull requests you opened.',
-      'Sign in',
+      'Add a GitHub token so the extension can find the pull requests you opened.',
+      'Add token',
       () => chrome.runtime.openOptionsPage(),
     ));
     $('hidden-wrap').hidden = true;

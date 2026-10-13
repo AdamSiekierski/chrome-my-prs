@@ -10,18 +10,18 @@ git clone https://github.com/AdamSiekierski/chrome-my-prs.git
 
 1. Open `chrome://extensions` and turn on **Developer mode**.
 2. **Load unpacked** → pick the `chrome-my-prs` folder. The settings page opens on first install.
-3. Press **Sign in with GitHub**, approve the code on the github.com tab that opens. Done.
+3. [Create a classic token with `repo` scope](https://github.com/settings/tokens/new?scopes=repo&description=My%20PRs%20Tab%20Group),
+   paste it, press **Check token**, then **Save changes**.
 
 To update: `git pull`, then press the reload icon on the extension's card in `chrome://extensions`.
 
-Sign-in uses the OAuth App whose Client ID is in `GITHUB_CLIENT_ID` in `lib/shared.js`. To use your own,
-create one at <https://github.com/settings/applications/new> (any homepage/callback URL), tick
-**Enable Device Flow**, and swap the id. If your org restricts third-party apps, an org owner has to
-approve the app once, or use a pasted token instead: a token reaches every repo you can.
+A token reaches every repo you can, so it's the recommended way. A
+[fine-grained token](https://github.com/settings/personal-access-tokens/new) works too: Pull requests + Metadata
+read-only on the repos you work in. If your org enforces SAML SSO, authorize the token for it, or those PRs
+silently won't appear in search.
 
-Pasted token (fallback): a [classic token with `repo` scope](https://github.com/settings/tokens/new?scopes=repo&description=My%20PRs%20Tab%20Group) (private repos), or a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with
-Pull requests + Metadata read-only on the repos you work in. If your org enforces SAML SSO,
-authorize the token for it, or those PRs silently won't appear in search.
+Alternatively, **Sign in with GitHub** skips the token: approve a code on github.com and you're done. But orgs
+that restrict third-party apps hide their PRs until an org owner approves the app; the popup warns when that happens.
 
 ## How it behaves
 
