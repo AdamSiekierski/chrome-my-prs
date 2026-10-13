@@ -2,7 +2,13 @@
 
 A Chrome extension that keeps one tab group filled with every open GitHub pull request you authored.
 
+![The popup listing open PRs next to the PR tab group](store/screenshot-popup.png)
+
 ## Install
+
+**Chrome Web Store:** *listing in review, link coming soon.*
+
+### From source
 
 ```sh
 git clone https://github.com/AdamSiekierski/chrome-my-prs.git
@@ -44,8 +50,22 @@ that restrict third-party apps hide their PRs until an org owner approves the ap
   Settings are the source of truth: renaming the group in Chrome's UI gets reverted, rename it in settings instead.
 - **The token stays in `storage.local`** and is sent only to `api.github.com`; hides go in `storage.sync`.
 
+## Privacy
+
+No server, no analytics. The token stays in this browser and goes only to GitHub. See [PRIVACY.md](PRIVACY.md).
+
+## Releasing
+
+Pushes to `master` ship a beta to trusted testers; a GitHub release `vX.Y.Z` ships to everyone.
+Setup and steps: [docs/publishing.md](docs/publishing.md).
+
 ## Files
 
 - `background.js`: sync loop, tab group reconciliation, context menu
 - `lib/shared.js`: settings, GitHub API, PR URL parsing
 - `popup.*`, `options.*`, `ui.css`: UI
+- `store/`: Web Store listing text and images
+
+## License
+
+[MIT](LICENSE)
