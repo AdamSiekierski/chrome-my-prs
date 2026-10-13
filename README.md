@@ -56,7 +56,7 @@ No server, no analytics. The token stays in this browser and goes only to GitHub
 
 ## Releasing
 
-Pushes to `master` ship a beta to trusted testers; a GitHub release `vX.Y.Z` ships to everyone.
+Publishing a GitHub release `vX.Y.Z` ships it to the Chrome Web Store.
 Setup and steps: [docs/publishing.md](docs/publishing.md).
 
 ## Files
