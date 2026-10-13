@@ -34,6 +34,8 @@ that restrict third-party apps hide their PRs until an org owner approves the ap
 - Every N minutes (default 5) it runs one GitHub search: `is:pr is:open author:@me archived:false`
   plus your optional extra filter (e.g. `org:my-company`).
 - Missing PRs get opened as background tabs in the group; merged, closed and hidden ones get closed.
+- **One group per repository** (off by default, in settings): each repo gets a group named `<group name>: <repo>`,
+  created with its first PR and gone once its last PR tab closes.
 - **Hide**: the Hide button in the popup, or right-click a PR page/link → *Hide from My PRs group*.
   Hides sync across machines through your Chrome account and are forgotten 30 days after the PR closes.
 - Clicking a PR in the popup jumps to its tab; clicking the group label opens the group.
