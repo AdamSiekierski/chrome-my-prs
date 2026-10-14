@@ -6,7 +6,7 @@ section { padding: 20px 0 8px; border-bottom: 1px solid var(--line); }
 h2 { font-size: 15px; margin: 0 0 14px; }
 label, legend { display: block; font-weight: 600; margin: 14px 0 6px; }
 section > label:first-of-type { margin-top: 0; }
-input[type="text"], input[type="password"], input[type="number"] {
+input[type="text"], input[type="password"], input[type="number"], input[type="url"] {
   width: 100%; padding: 7px 10px; border: 1px solid var(--line);
   border-radius: var(--radius-m); background: var(--surface);
 }
@@ -33,3 +33,5 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .swatch input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
 .save-row { display: flex; gap: 12px; align-items: center; padding-top: 20px; }
 #saved { color: var(--muted); }
+.instance { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px dashed var(--line); }
+.instance label:first-child { margin-top: 0; }

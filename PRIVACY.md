@@ -4,7 +4,7 @@
 
 ## What it stores, and where
 
-- **Your GitHub token** (pasted, or from *Sign in with GitHub*) is kept in Chrome's local extension storage
+- **Your GitHub token** (pasted, or from *Sign in with GitHub*) and **GitLab tokens** are kept in Chrome's local extension storage
   (`chrome.storage.local`) on your computer. It does not sync to other machines.
 - **Settings** (group name and color, search filter, sync interval) and the **last fetched list of your open PRs**
   are kept in the same local storage.
@@ -13,19 +13,21 @@
 
 ## What it sends, and to whom
 
-The extension talks to GitHub only:
+The extension talks to GitHub, and to GitLab only if you set it up:
 
 - `api.github.com`: your token, to search your open pull requests and check your organization memberships.
 - `github.com/login`: only during *Sign in with GitHub*, to run GitHub's device sign-in flow.
+- Each GitLab instance you add in settings (gitlab.com or your own): that instance's token, to list your open merge
+  requests there.
 
 GitHub's own [privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement)
-covers those requests. Nothing is sent anywhere else, and no data is sold or shared with anyone.
+covers the GitHub requests; your GitLab provider's policy covers the GitLab ones. Nothing is sent anywhere else, and no data is sold or shared with anyone.
 
 ## Removing your data
 
-Clear the token in the extension's settings, or uninstall the extension, which deletes everything it stored. To revoke
+Clear the tokens in the extension's settings, or uninstall the extension, which deletes everything it stored. To revoke
 access on GitHub's side, delete the token at <https://github.com/settings/tokens>, or revoke the *My PRs* app at
-<https://github.com/settings/applications>.
+<https://github.com/settings/applications>. GitLab tokens are revoked under *User settings → Access tokens*.
 
 ## Contact
 

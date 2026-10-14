@@ -1,4 +1,6 @@
-import { DEFAULTS, COLOR_HEX, getSettings, getViewer, deviceLogin } from './lib/shared.js';
+import { DEFAULTS, COLOR_HEX, getSettings } from './lib/shared.js';
+import { getViewer, deviceLogin } from './lib/github.js';
+import { getGitlabUser, gitlabOrigin } from './lib/gitlab.js';
 
 const $ = (id) => document.getElementById(id);
 const form = $('form');
@@ -27,6 +29,7 @@ async function load() {
   $('includeDrafts').checked = s.includeDrafts;
   $('extraQuery').value = s.extraQuery;
   $('pollMinutes').value = s.pollMinutes;
+  $('gitlab-list').replaceChildren(...s.gitlabInstances.map(gitlabRow));
   renderSwatches(s.groupColor);
   document.documentElement.style.setProperty('--group', COLOR_HEX[s.groupColor]);
 }
@@ -37,6 +40,94 @@ $('reveal').addEventListener('click', () => {
   input.type = show ? 'text' : 'password';
   $('reveal').textContent = show ? 'Hide' : 'Show';
 });
+
+// ---------- GitLab instances ----------
+
+let rowCount = 0;
+
+function setStatus(node, text, kind) {
+  node.className = `hint${kind ? ` ${kind}` : ''}`;
+  node.textContent = text;
+}
+
+function gitlabRow({ url = 'https://gitlab.com', token = '' } = {}) {
+  const row = $('gitlab-row').content.firstElementChild.cloneNode(true);
+  const field = (name) => row.querySelector(`[data-field="${name}"]`);
+  const n = ++rowCount;
+  for (const name of ['url', 'token']) {
+    field(name).id = `gitlab-${name}-${n}`;
+    row.querySelector(`[data-for="${name}"]`).htmlFor = field(name).id;
+  }
+  field('url').value = url;
+  field('token').value = token;
+  const updateLink = () => {
+    const origin = gitlabOrigin(field('url').value.trim()) ?? 'https://gitlab.com';
+    field('link').href = `${origin}/-/user_settings/personal_access_tokens?name=My%20PRs%20Tab%20Group&scopes=read_api`;
+  };
+  updateLink();
+  field('url').addEventListener('input', updateLink);
+
+  row.querySelector('[data-action="reveal"]').addEventListener('click', (e) => {
+    const show = field('token').type === 'password';
+    field('token').type = show ? 'text' : 'password';
+    e.target.textContent = show ? 'Hide' : 'Show';
+  });
+  row.querySelector('[data-action="remove"]').addEventListener('click', () => row.remove());
+  row.querySelector('[data-action="check"]').addEventListener('click', async () => {
+    const instance = { url: field('url').value.trim(), token: field('token').value.trim() };
+    if (!instance.token) return setStatus(field('status'), 'Paste a token first.', 'err');
+    if (!(await requestAccess([instance], field('status')))) return;
+    setStatus(field('status'), 'Checking…');
+    try {
+      const user = await getGitlabUser(instance);
+      setStatus(field('status'), `Works. Signed in as @${user.username}.`, 'ok');
+    } catch (e) {
+      setStatus(field('status'), e.message, 'err');
+    }
+  });
+  return row;
+}
+
+$('gitlab-add').addEventListener('click', () => {
+  const row = gitlabRow({ url: '' });
+  $('gitlab-list').append(row);
+  row.querySelector('input').focus();
+});
+
+// Reads the rows, skipping empty ones. Returns null after flagging the first bad row.
+function readInstances() {
+  const instances = [];
+  for (const row of $('gitlab-list').children) {
+    const url = row.querySelector('[data-field="url"]').value.trim();
+    const token = row.querySelector('[data-field="token"]').value.trim();
+    const status = row.querySelector('[data-field="status"]');
+    if (!token && (!url || url === 'https://gitlab.com')) continue;
+    const origin = gitlabOrigin(url);
+    let error = null;
+    if (!origin) error = 'Enter a valid GitLab URL, like https://gitlab.example.com.';
+    else if (!token) error = 'Paste a token, or remove this instance.';
+    else if (instances.some((i) => i.url === origin)) error = 'This instance is already in the list.';
+    if (error) {
+      setStatus(status, error, 'err');
+      return null;
+    }
+    instances.push({ url: origin, token });
+  }
+  return instances;
+}
+
+// Must run before any other await in a click/submit handler: Chrome only prompts during a user gesture.
+async function requestAccess(instances, status) {
+  const origins = instances.map((i) => gitlabOrigin(i.url));
+  if (origins.includes(null)) {
+    setStatus(status, 'Enter a valid GitLab URL, like https://gitlab.example.com.', 'err');
+    return false;
+  }
+  if (!origins.length) return true;
+  const granted = await chrome.permissions.request({ origins: origins.map((o) => `${o}/*`) }).catch(() => false);
+  if (!granted) setStatus(status, 'Chrome access to the GitLab instance was not allowed, so it can\'t be used.', 'err');
+  return granted;
+}
 
 $('check').addEventListener('click', async () => {
   const status = $('token-status');
@@ -84,6 +175,11 @@ $('signin').addEventListener('click', async () => {
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  $('saved').textContent = '';
+  const gitlabInstances = readInstances();
+  if (!gitlabInstances) return setStatus($('saved'), 'Not saved: fix the GitLab instance marked above.', 'err');
+  if (!(await requestAccess(gitlabInstances, $('saved')))) return;
+  const { gitlabInstances: before } = await getSettings();
   const poll = Math.round(Number($('pollMinutes').value));
   await chrome.storage.local.set({
     token: $('token').value.trim(),
@@ -92,9 +188,14 @@ form.addEventListener('submit', async (e) => {
     groupByRepo: $('groupByRepo').checked,
     includeDrafts: $('includeDrafts').checked,
     extraQuery: $('extraQuery').value.trim(),
+    gitlabInstances,
     pollMinutes: Number.isFinite(poll) ? Math.min(60, Math.max(1, poll)) : DEFAULTS.pollMinutes,
   });
+  // Give back access to instances that were removed.
+  const gone = before.map((i) => `${i.url}/*`).filter((o) => !gitlabInstances.some((i) => `${i.url}/*` === o));
+  if (gone.length) await chrome.permissions.remove({ origins: gone }).catch(() => {});
   await load();
+  $('saved').className = '';
   $('saved').textContent = 'Saved. Syncing now.';
   setTimeout(() => { $('saved').textContent = ''; }, 3000);
 });

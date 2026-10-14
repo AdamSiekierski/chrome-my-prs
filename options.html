@@ -10,7 +10,7 @@
   <main class="page">
     <header class="head">
       <h1>My PRs Tab Group</h1>
-      <p>Keeps one tab group filled with the open pull requests you authored on GitHub. Merged and closed PRs leave the group on the next sync.</p>
+      <p>Keeps one tab group filled with the open pull requests you authored on GitHub and GitLab. Merged and closed PRs leave the group on the next sync.</p>
     </header>
 
     <form id="form">
@@ -39,6 +39,14 @@
       </section>
 
       <section>
+        <h2>GitLab instances</h2>
+        <div id="gitlab-list"></div>
+        <button type="button" class="btn" id="gitlab-add">Add GitLab instance</button>
+        <p class="hint">gitlab.com or your company's own GitLab, each with a personal access token with the <code>read_api</code> scope.
+          Chrome asks to allow access to each instance when you save. Each token is kept in this browser and sent only to its own instance.</p>
+      </section>
+
+      <section>
         <h2>Tab group</h2>
         <label for="groupTitle">Group name</label>
         <input id="groupTitle" type="text" maxlength="40">
@@ -59,9 +67,9 @@
 
         <label for="extraQuery">Extra search filter</label>
         <input id="extraQuery" type="text" spellcheck="false" placeholder="org:my-company -repo:me/dotfiles">
-        <p class="hint">Added to <code>is:pr is:open author:@me</code>. Any <a href="https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests" target="_blank" rel="noopener">GitHub search qualifier</a> works.</p>
+        <p class="hint">GitHub only. Added to <code>is:pr is:open author:@me</code>. Any <a href="https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests" target="_blank" rel="noopener">GitHub search qualifier</a> works.</p>
 
-        <label for="pollMinutes">Check GitHub every</label>
+        <label for="pollMinutes">Check every</label>
         <div class="inline narrow">
           <input id="pollMinutes" type="number" min="1" max="60" step="1">
           <span>minutes</span>
@@ -74,6 +82,21 @@
       </div>
     </form>
   </main>
+  <template id="gitlab-row">
+    <div class="instance">
+      <label data-for="url">GitLab URL</label>
+      <input data-field="url" type="url" spellcheck="false" placeholder="https://gitlab.com">
+      <label data-for="token">Personal access token</label>
+      <div class="inline">
+        <input data-field="token" type="password" autocomplete="off" spellcheck="false" placeholder="glpat-…">
+        <button type="button" class="btn" data-action="reveal">Show</button>
+        <button type="button" class="btn" data-action="check">Check token</button>
+        <button type="button" class="btn" data-action="remove">Remove</button>
+      </div>
+      <p class="hint" data-field="status" role="status"></p>
+      <p class="hint"><a data-field="link" target="_blank" rel="noopener">Create a token</a> with the <code>read_api</code> scope.</p>
+    </div>
+  </template>
   <script type="module" src="options.js"></script>
 </body>
 </html>
