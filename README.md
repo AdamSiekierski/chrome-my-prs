@@ -31,7 +31,7 @@ that restrict third-party apps hide their PRs until an org owner approves the ap
 
 ### GitLab
 
-In settings, under **GitLab instances**, add each GitLab you use (`https://gitlab.com` and/or self-hosted ones), each
+In settings, under **GitLab instances**, add each GitLab you use (leave the URL empty for gitlab.com, or enter a self-hosted one), each
 with its own personal access token with the `read_api` scope. On save, Chrome asks to allow access to those instances,
 and gives access back for ones you remove. GitHub and GitLab are independent; set up any combination.
 
