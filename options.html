@@ -42,7 +42,7 @@
         <h2>GitLab instances</h2>
         <div id="gitlab-list"></div>
         <button type="button" class="btn" id="gitlab-add">Add GitLab instance</button>
-        <p class="hint">gitlab.com or your company's own GitLab, each with a personal access token with the <code>read_api</code> scope.
+        <p class="hint">gitlab.com (leave the URL empty) or your company's own GitLab, each with a personal access token with the <code>read_api</code> scope.
           Chrome asks to allow access to each instance when you save. Each token is kept in this browser and sent only to its own instance.</p>
       </section>
 
@@ -84,7 +84,7 @@
   </main>
   <template id="gitlab-row">
     <div class="instance">
-      <label data-for="url">GitLab URL</label>
+      <label data-for="url">GitLab URL (empty for gitlab.com)</label>
       <input data-field="url" type="url" spellcheck="false" placeholder="https://gitlab.com">
       <label data-for="token">Personal access token</label>
       <div class="inline">
