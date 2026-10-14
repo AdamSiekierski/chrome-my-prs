@@ -127,6 +127,19 @@ async function reconcileGroups(settings, sources, wanted) {
     }
   }
 
+  // A PR you already have open in an ungrouped tab moves into its group instead of getting a duplicate.
+  // Pinned tabs and tabs in popup or incognito windows stay put.
+  if ([...wanted.keys()].some((k) => !present.has(k))) {
+    const loose = await chrome.tabs.query({
+      groupId: chrome.tabGroups.TAB_GROUP_ID_NONE, pinned: false, windowType: 'normal',
+      url: sources.flatMap((a) => a.urlPatterns),
+    });
+    for (const tab of loose) {
+      const key = prKeyFromUrl(tab.url || tab.pendingUrl, sources);
+      if (!tab.incognito && wanted.has(key) && !present.has(key)) present.set(key, tab);
+    }
+  }
+
   const prsByTitle = new Map();
   for (const pr of wanted.values()) {
     const title = titleFor(settings, pr);
