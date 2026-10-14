@@ -41,6 +41,7 @@ and gives access back for ones you remove. GitHub and GitLab are independent; se
   plus your optional extra filter (e.g. `org:my-company`). Each GitLab instance adds one
   `GET /api/v4/merge_requests?scope=created_by_me&state=opened` (the extra filter doesn't apply to it).
 - Missing PRs get opened as background tabs in the group; merged, closed and hidden ones get closed.
+  A PR you already have open in an ungrouped tab is moved into the group instead of opened again.
 - **One group per repository** (off by default, in settings): each repo gets a group named `<group name>: <repo>`,
   created with its first PR and gone once its last PR tab closes.
 - **Hide**: the Hide button in the popup, or right-click a PR page/link → *Hide from My PRs group*.
