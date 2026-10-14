@@ -46,6 +46,8 @@ and gives access back for ones you remove. GitHub and GitLab are independent; se
 - **Hide**: the Hide button in the popup, or right-click a PR page/link → *Hide from My PRs group*.
   Hides sync across machines through your Chrome account and are forgotten 30 days after the PR closes.
 - Clicking a PR in the popup jumps to its tab; clicking the group label opens the group.
+- Opening a PR that already has a tab in the group (a link, a bookmark, typing the URL) switches to that tab instead of
+  duplicating it. A new tab closes; a tab you followed a link in goes back to where it was.
 
 ### Deliberate choices
 

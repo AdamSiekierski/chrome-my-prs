@@ -220,12 +220,34 @@ async function focusPR(key, url) {
     ? (await Promise.all(groups.map((g) => chrome.tabs.query({ groupId: g.id })))).flat()
     : await chrome.tabs.query({ url: sources.flatMap((a) => a.urlPatterns) });
   const tab = candidates.find((t) => prKeyFromUrl(t.url || t.pendingUrl, sources) === key);
-  if (tab) {
-    await chrome.tabs.update(tab.id, { active: true });
-    await chrome.windows.update(tab.windowId, { focused: true });
-  } else {
-    await chrome.tabs.create({ url });
-  }
+  if (tab) await activate(tab);
+  else await chrome.tabs.create({ url });
+}
+
+async function activate(tab) {
+  await chrome.tabs.update(tab.id, { active: true });
+  await chrome.windows.update(tab.windowId, { focused: true });
+}
+
+// A tab outside our groups landing on a PR that already has a group tab: show the group tab instead.
+// The duplicate goes back if it has history (a link followed in the same tab), else it closes.
+async function dedupeTab(tabId, url) {
+  const settings = await getSettings();
+  if (!settings.enabled) return;
+  const sources = adapters(settings);
+  const key = prKeyFromUrl(url, sources);
+  if (!key) return;
+  const groups = await findGroups(settings);
+  const groupIds = new Set(groups.map((g) => g.id));
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  if (!tab || groupIds.has(tab.groupId) || tab.incognito) return;
+  const tabs = (await Promise.all(groups.map((g) => chrome.tabs.query({ groupId: g.id })))).flat();
+  const existing = tabs.find((t) => prKeyFromUrl(t.url || t.pendingUrl, sources) === key);
+  if (!existing) return;
+  // Keep the exact page asked for (e.g. /files or a comment anchor).
+  if (existing.url !== url) await chrome.tabs.update(existing.id, { url });
+  await activate(existing);
+  await chrome.tabs.goBack(tabId).catch(() => chrome.tabs.remove(tabId).catch(() => {}));
 }
 
 // With one group per repo, this opens the first one.
@@ -297,6 +319,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
   } else if (keys.some((k) => ['groupTitle', 'groupColor', 'groupByRepo', 'enabled'].includes(k))) {
     requestSync();
   }
+});
+
+chrome.tabs.onUpdated.addListener((tabId, { url }) => {
+  if (url) dedupeTab(tabId, url).catch((e) => console.error('[my-prs] dedupe failed', e));
 });
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
