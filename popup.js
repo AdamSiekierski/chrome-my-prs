@@ -1,11 +1,11 @@
-import { getSettings, getHidden, setHidden, COLOR_HEX, timeAgo } from './lib/shared.js';
+import { getSettings, getHidden, setHidden, adapters, COLOR_HEX, timeAgo } from './lib/shared.js';
 
 const $ = (id) => document.getElementById(id);
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
-  if (text != null) node.textContent = text; // titles come from GitHub: never innerHTML
+  if (text != null) node.textContent = text; // titles come from GitHub/GitLab: never innerHTML
   return node;
 }
 
@@ -22,7 +22,7 @@ function prRow(pr, isHidden) {
   const row = el('div', 'row');
   const main = el('button', 'row-main');
   main.title = isHidden ? `Open ${pr.title}` : `Go to ${pr.title}`;
-  main.append(el('span', 'num', `#${pr.number}`), el('span', 'title', pr.title));
+  main.append(el('span', 'num', pr.ref ?? `#${pr.number}`), el('span', 'title', pr.title));
   if (pr.draft) main.append(el('span', 'tag', 'Draft'));
   main.addEventListener('click', async () => {
     if (isHidden) await chrome.tabs.create({ url: pr.url });
@@ -85,10 +85,10 @@ async function render() {
   status.className = 'status';
   const list = $('list');
 
-  if (!settings.token) {
+  if (!adapters(settings).length) {
     status.textContent = '';
     list.replaceChildren(emptyState(
-      'Add a GitHub token so the extension can find the pull requests you opened.',
+      'Add a GitHub or GitLab token so the extension can find the pull requests you opened.',
       'Add token',
       () => chrome.runtime.openOptionsPage(),
     ));

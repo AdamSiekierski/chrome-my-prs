@@ -1,4 +1,4 @@
-import { getSettings, getHidden, setHidden, fetchMyPRs, findBlockedOrgs, prKeyFromUrl, COLOR_HEX } from './lib/shared.js';
+import { getSettings, getHidden, setHidden, adapters, prKeyFromUrl, COLOR_HEX } from './lib/shared.js';
 
 const ALARM = 'my-prs-sync';
 const MENU_ID = 'my-prs-hide';
@@ -38,9 +38,10 @@ function requestSync({ refetch = false } = {}) {
 
 async function doSync({ refetch }) {
   const settings = await getSettings();
+  const sources = adapters(settings);
 
-  if (!settings.token) {
-    await badge('!', ERROR_RED, 'My PRs: add a GitHub token in settings');
+  if (!sources.length) {
+    await badge('!', ERROR_RED, 'My PRs: add a GitHub or GitLab token in settings');
     return;
   }
 
@@ -48,7 +49,10 @@ async function doSync({ refetch }) {
 
   if (refetch || !prCache?.fetchedAt) {
     try {
-      const [prs, blockedOrgs] = await Promise.all([fetchMyPRs(settings), findBlockedOrgs(settings.token)]);
+      // Any source failing fails the whole fetch, so one source's outage can't close another's tabs.
+      const results = await Promise.all(sources.map((a) => a.fetch()));
+      const prs = results.flatMap((r) => r.prs);
+      const blockedOrgs = results.flatMap((r) => r.blockedOrgs ?? []);
       prCache = { prs, blockedOrgs, fetchedAt: Date.now(), error: null };
       await chrome.storage.local.set({ prCache });
       await pruneHidden(prs);
@@ -68,7 +72,7 @@ async function doSync({ refetch }) {
     return;
   }
 
-  await reconcileGroups(settings, wanted);
+  await reconcileGroups(settings, sources, wanted);
   await badge(
     wanted.size ? String(wanted.size) : '',
     prCache.error || prCache.blockedOrgs?.length ? ERROR_RED : COLOR_HEX[settings.groupColor],
@@ -81,7 +85,7 @@ async function doSync({ refetch }) {
 // With "group by repository" each repo gets "<group name>: <repo>"; otherwise every PR shares one group.
 // ponytail: repo name only, so same-named repos from different owners share a group.
 function titleFor(settings, pr) {
-  return settings.groupByRepo ? `${settings.groupTitle}: ${pr.repo.split('/')[1]}` : settings.groupTitle;
+  return settings.groupByRepo ? `${settings.groupTitle}: ${pr.repo.split('/').pop()}` : settings.groupTitle;
 }
 
 async function findGroups(settings) {
@@ -104,14 +108,14 @@ async function targetWindowId() {
   return wins.find((w) => !w.incognito)?.id ?? null;
 }
 
-async function reconcileGroups(settings, wanted) {
+async function reconcileGroups(settings, sources, wanted) {
   const groups = await findGroups(settings);
   const tabs = (await Promise.all(groups.map((g) => chrome.tabs.query({ groupId: g.id })))).flat();
 
   const present = new Map();
   const toClose = [];
   for (const tab of tabs) {
-    const key = prKeyFromUrl(tab.url || tab.pendingUrl);
+    const key = prKeyFromUrl(tab.url || tab.pendingUrl, sources);
     // Tabs that aren't PR pages are yours (you dragged them in or navigated away): never touch them.
     if (!key) continue;
     if (wanted.has(key) && !present.has(key)) {
@@ -210,11 +214,12 @@ async function scheduleAlarm() {
 
 async function focusPR(key, url) {
   const settings = await getSettings();
+  const sources = adapters(settings);
   const groups = await findGroups(settings);
   const candidates = groups.length
     ? (await Promise.all(groups.map((g) => chrome.tabs.query({ groupId: g.id })))).flat()
-    : await chrome.tabs.query({ url: 'https://github.com/*/*/pull/*' });
-  const tab = candidates.find((t) => prKeyFromUrl(t.url || t.pendingUrl) === key);
+    : await chrome.tabs.query({ url: sources.flatMap((a) => a.urlPatterns) });
+  const tab = candidates.find((t) => prKeyFromUrl(t.url || t.pendingUrl, sources) === key);
   if (tab) {
     await chrome.tabs.update(tab.id, { active: true });
     await chrome.windows.update(tab.windowId, { focused: true });
@@ -237,18 +242,24 @@ async function focusGroup() {
 // ---------- Event wiring ----------
 // Listeners are registered at the top level so they survive service worker restarts.
 
-chrome.runtime.onInstalled.addListener(async ({ reason }) => {
+// Context menus persist across restarts, so this runs on install/update and when the sources change.
+async function setupMenu() {
+  const patterns = adapters(await getSettings()).flatMap((a) => a.urlPatterns);
   await chrome.contextMenus.removeAll();
+  if (!patterns.length) return; // an empty pattern list would mean "everywhere"
   chrome.contextMenus.create({
     id: MENU_ID,
     title: 'Hide from My PRs group',
     contexts: ['page', 'link'],
-    documentUrlPatterns: ['https://github.com/*'],
-    targetUrlPatterns: ['https://github.com/*/*/pull/*'],
+    documentUrlPatterns: patterns,
+    targetUrlPatterns: patterns,
   });
+}
+
+chrome.runtime.onInstalled.addListener(async ({ reason }) => {
+  await setupMenu();
   await scheduleAlarm();
-  const { token } = await getSettings();
-  if (reason === 'install' && !token) chrome.runtime.openOptionsPage();
+  if (reason === 'install' && !adapters(await getSettings()).length) chrome.runtime.openOptionsPage();
   requestSync({ refetch: true });
 });
 
@@ -264,7 +275,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId !== MENU_ID) return;
   // Right-click on a PR link hides that PR; right-click on a PR page hides the page's PR.
-  const key = prKeyFromUrl(info.linkUrl) ?? prKeyFromUrl(info.pageUrl);
+  const sources = adapters(await getSettings());
+  const key = prKeyFromUrl(info.linkUrl, sources) ?? prKeyFromUrl(info.pageUrl, sources);
   if (!key) return;
   const hidden = await getHidden();
   hidden[key] = Date.now();
@@ -279,7 +291,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
   const keys = Object.keys(changes);
   if (keys.includes('pollMinutes')) scheduleAlarm();
-  if (keys.some((k) => ['token', 'includeDrafts', 'extraQuery'].includes(k))) {
+  if (keys.some((k) => ['token', 'gitlabInstances'].includes(k))) setupMenu();
+  if (keys.some((k) => ['token', 'includeDrafts', 'extraQuery', 'gitlabInstances'].includes(k))) {
     requestSync({ refetch: true });
   } else if (keys.some((k) => ['groupTitle', 'groupColor', 'groupByRepo', 'enabled'].includes(k))) {
     requestSync();

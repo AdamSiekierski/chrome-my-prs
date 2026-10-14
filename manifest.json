@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "My PRs Tab Group",
-  "version": "1.1.0",
-  "description": "Keeps a Chrome tab group open with every open GitHub pull request you authored. No tracking, no server.",
+  "version": "1.2.0",
+  "description": "Keeps a Chrome tab group open with every open GitHub pull request and GitLab merge request you authored. No tracking.",
   "minimum_chrome_version": "120",
   "permissions": ["tabs", "tabGroups", "storage", "alarms", "contextMenus"],
   "host_permissions": ["https://api.github.com/*", "https://github.com/login/*"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
   "background": { "service_worker": "background.js", "type": "module" },
   "homepage_url": "https://github.com/AdamSiekierski/chrome-my-prs",
   "action": {

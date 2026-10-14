@@ -1,6 +1,6 @@
 # My PRs Tab Group
 
-A Chrome extension that keeps one tab group filled with every open GitHub pull request you authored.
+A Chrome extension that keeps one tab group filled with every open GitHub pull request and GitLab merge request you authored.
 
 ![The popup listing open PRs next to the PR tab group](store/screenshot-popup.png)
 
@@ -29,10 +29,17 @@ silently won't appear in search.
 Alternatively, **Sign in with GitHub** skips the token: approve a code on github.com and you're done. But orgs
 that restrict third-party apps hide their PRs until an org owner approves the app; the popup warns when that happens.
 
+### GitLab
+
+In settings, under **GitLab instances**, add each GitLab you use (`https://gitlab.com` and/or self-hosted ones), each
+with its own personal access token with the `read_api` scope. On save, Chrome asks to allow access to those instances,
+and gives access back for ones you remove. GitHub and GitLab are independent; set up any combination.
+
 ## How it behaves
 
 - Every N minutes (default 5) it runs one GitHub search: `is:pr is:open author:@me archived:false`
-  plus your optional extra filter (e.g. `org:my-company`).
+  plus your optional extra filter (e.g. `org:my-company`). Each GitLab instance adds one
+  `GET /api/v4/merge_requests?scope=created_by_me&state=opened` (the extra filter doesn't apply to it).
 - Missing PRs get opened as background tabs in the group; merged, closed and hidden ones get closed.
 - **One group per repository** (off by default, in settings): each repo gets a group named `<group name>: <repo>`,
   created with its first PR and gone once its last PR tab closes.
@@ -43,6 +50,7 @@ that restrict third-party apps hide their PRs until an org owner approves the ap
 ### Deliberate choices
 
 - **A failed fetch never closes tabs.** A network blip or expired token must not read as "you have no PRs".
+  With several sources set up, any one failing skips the whole sync.
 - **The active tab is never closed.** A PR you just merged stays put until you switch away; the next sync removes it.
 - **Non-PR tabs inside the group are left alone**, and a tab you navigated within a PR (`/files`, `/commits`) still
   counts as that PR's tab, so no duplicates.
@@ -50,7 +58,10 @@ that restrict third-party apps hide their PRs until an org owner approves the ap
   pausing (the toggle in the popup) stops all changes.
 - **The group is found by name after a restart** (Chrome doesn't keep group ids), so keep the name unique.
   Settings are the source of truth: renaming the group in Chrome's UI gets reverted, rename it in settings instead.
-- **The token stays in `storage.local`** and is sent only to `api.github.com`; hides go in `storage.sync`.
+- **Tokens stay in `storage.local`**: the GitHub one is sent only to `api.github.com`, each GitLab one only to its own
+  instance. Hides go in `storage.sync`.
+- **GitLab access is an optional permission**, requested for just the instances you add, so adding GitLab support didn't
+  make Chrome disable the extension for existing users.
 
 ## Privacy
 
@@ -64,7 +75,8 @@ Setup and steps: [docs/publishing.md](docs/publishing.md).
 ## Files
 
 - `background.js`: sync loop, tab group reconciliation, context menu
-- `lib/shared.js`: settings, GitHub API, PR URL parsing
+- `lib/shared.js`: settings, hides, the list of active sources (adapters)
+- `lib/github.js`, `lib/gitlab.js`: one adapter per source: fetch your open PRs/MRs, recognize their URLs
 - `popup.*`, `options.*`, `ui.css`: UI
 - `store/`: Web Store listing text and images
 
