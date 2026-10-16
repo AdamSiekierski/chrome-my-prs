@@ -44,6 +44,8 @@ and gives access back for ones you remove. GitHub and GitLab are independent; se
   A PR you already have open in an ungrouped tab is moved into the group instead of opened again.
 - **One group per repository** (off by default, in settings): each repo gets a group named `<group name>: <repo>`,
   created with its first PR and gone once its last PR tab closes.
+- **Move other tabs out of the group** (off by default, in settings): a tab in the group that isn't a PR page is
+  ungrouped as soon as it leaves the PR (and on every sync), so the group holds only PRs.
 - **Hide**: the Hide button in the popup, or right-click a PR page/link → *Hide from My PRs group*.
   Hides sync across machines through your Chrome account and are forgotten 30 days after the PR closes.
 - Clicking a PR in the popup jumps to its tab; clicking the group label opens the group.
@@ -55,7 +57,9 @@ and gives access back for ones you remove. GitHub and GitLab are independent; se
 - **A failed fetch never closes tabs.** A network blip or expired token must not read as "you have no PRs".
   With several sources set up, any one failing skips the whole sync.
 - **The active tab is never closed.** A PR you just merged stays put until you switch away; the next sync removes it.
-- **Non-PR tabs inside the group are left alone**, and a tab you navigated within a PR (`/files`, `/commits`) still
+- **Non-PR tabs inside the group are never closed.** By default they're left alone; with **Move other tabs out of
+  the group** (in settings) they're moved next to the group: a link opened from a PR, a tab navigated away, one you
+  dragged in. A tab you navigated within a PR (`/files`, `/commits`) still
   counts as that PR's tab, so no duplicates.
 - **Closing a PR tab by hand doesn't hide it**, so it comes back on the next sync. Hide is the explicit way to remove one;
   pausing (the toggle in the popup) stops all changes.

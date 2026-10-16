@@ -26,6 +26,7 @@ async function load() {
   $('token').value = s.token;
   $('groupTitle').value = s.groupTitle;
   $('groupByRepo').checked = s.groupByRepo;
+  $('ungroupOthers').checked = s.ungroupOthers;
   $('includeDrafts').checked = s.includeDrafts;
   $('extraQuery').value = s.extraQuery;
   $('pollMinutes').value = s.pollMinutes;
@@ -186,6 +187,7 @@ form.addEventListener('submit', async (e) => {
     groupTitle: $('groupTitle').value.trim() || DEFAULTS.groupTitle,
     groupColor: form.querySelector('input[name="groupColor"]:checked')?.value ?? DEFAULTS.groupColor,
     groupByRepo: $('groupByRepo').checked,
+    ungroupOthers: $('ungroupOthers').checked,
     includeDrafts: $('includeDrafts').checked,
     extraQuery: $('extraQuery').value.trim(),
     gitlabInstances,

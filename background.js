@@ -114,10 +114,15 @@ async function reconcileGroups(settings, sources, wanted) {
 
   const present = new Map();
   const toClose = [];
+  const toUngroup = [];
   for (const tab of tabs) {
     const key = prKeyFromUrl(tab.url || tab.pendingUrl, sources);
-    // Tabs that aren't PR pages are yours (you dragged them in or navigated away): never touch them.
-    if (!key) continue;
+    // Tabs that aren't PR pages (opened from a PR, navigated away, dragged in) are never closed:
+    // left alone, or moved out of the group with "move other tabs out".
+    if (!key) {
+      if (settings.ungroupOthers) toUngroup.push(tab.id);
+      continue;
+    }
     if (wanted.has(key) && !present.has(key)) {
       present.set(key, tab);
     } else if (!tab.active) {
@@ -189,6 +194,7 @@ async function reconcileGroups(settings, sources, wanted) {
 
   // Close after adding: if every tab were closed first, Chrome would delete the group itself.
   // Groups left with no PRs disappear on their own once their last tab closes.
+  if (toUngroup.length) await chrome.tabs.ungroup(toUngroup);
   if (toClose.length) await chrome.tabs.remove(toClose);
 }
 
@@ -242,18 +248,23 @@ async function activate(tab) {
   await chrome.windows.update(tab.windowId, { focused: true });
 }
 
+// With "move other tabs out", a group tab leaving PR pages moves out right away, not on the next sync.
 // A tab outside our groups landing on a PR that already has a group tab: show the group tab instead.
 // The duplicate goes back if it has history (a link followed in the same tab), else it closes.
-async function dedupeTab(tabId, url) {
+async function onTabUrl(tabId, url) {
   const settings = await getSettings();
   if (!settings.enabled) return;
   const sources = adapters(settings);
   const key = prKeyFromUrl(url, sources);
-  if (!key) return;
   const groups = await findGroups(settings);
   const groupIds = new Set(groups.map((g) => g.id));
   const tab = await chrome.tabs.get(tabId).catch(() => null);
-  if (!tab || groupIds.has(tab.groupId) || tab.incognito) return;
+  if (!tab || tab.incognito) return;
+  if (groupIds.has(tab.groupId)) {
+    if (!key && settings.ungroupOthers) await chrome.tabs.ungroup(tabId);
+    return;
+  }
+  if (!key) return;
   const tabs = (await Promise.all(groups.map((g) => chrome.tabs.query({ groupId: g.id })))).flat();
   const existing = tabs.find((t) => prKeyFromUrl(t.url || t.pendingUrl, sources) === key);
   if (!existing) return;
@@ -329,13 +340,13 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (keys.some((k) => ['token', 'gitlabInstances'].includes(k))) setupMenu();
   if (keys.some((k) => ['token', 'includeDrafts', 'extraQuery', 'gitlabInstances'].includes(k))) {
     requestSync({ refetch: true });
-  } else if (keys.some((k) => ['groupTitle', 'groupColor', 'groupByRepo', 'enabled'].includes(k))) {
+  } else if (keys.some((k) => ['groupTitle', 'groupColor', 'groupByRepo', 'ungroupOthers', 'enabled'].includes(k))) {
     requestSync();
   }
 });
 
 chrome.tabs.onUpdated.addListener((tabId, { url }) => {
-  if (url) dedupeTab(tabId, url).catch((e) => console.error('[my-prs] dedupe failed', e));
+  if (url) onTabUrl(tabId, url).catch((e) => console.error('[my-prs] tab update failed', e));
 });
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
