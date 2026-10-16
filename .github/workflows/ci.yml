@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run build
+      # Builds for Firefox and runs Mozilla's add-on linter, the same one AMO runs on upload.
+      - run: bun run lint:firefox
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      # Selenium Manager downloads Firefox and geckodriver itself.
+      - run: bun run e2e
+      # Open a trace with `bunx playwright show-trace trace.zip`.
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-traces
+          path: test-results/

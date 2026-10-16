@@ -1,16 +1,22 @@
 // GitLab adapter, one per configured instance (gitlab.com or self-hosted).
 // Any instance works, so host access is an optional permission the settings page requests per instance.
+import { browser } from 'wxt/browser';
+import type { Adapter, GitlabInstance, PR, Settings } from './shared';
 
 // A blank URL means gitlab.com.
 // ponytail: origin only, so a GitLab served under a sub-path (example.com/gitlab) isn't supported.
-export function gitlabOrigin(url) {
-  try { return new URL(url || 'https://gitlab.com').origin.toLowerCase(); } catch { return null; }
+export function gitlabOrigin(url: string | undefined): string | null {
+  try {
+    return new URL(url || 'https://gitlab.com').origin.toLowerCase();
+  } catch {
+    return null;
+  }
 }
 
 // MRs live at <origin>/group/sub/project/-/merge_requests/123[/diffs…]; groups can nest.
 // Keys look like "gitlab.com/group/sub/project!123": the host keeps two instances' MRs apart,
 // and the "!" keeps them apart from GitHub's "owner/repo#123".
-export function gitlabAdapter(instance, settings) {
+export function gitlabAdapter(instance: GitlabInstance, settings: Settings): Adapter {
   const origin = gitlabOrigin(instance.url);
   const host = origin ? new URL(origin).host : instance.url;
   return {
@@ -27,11 +33,11 @@ export function gitlabAdapter(instance, settings) {
   };
 }
 
-async function gitlabGet(path, { url, token }) {
+async function gitlabGet<T>(path: string, { url, token }: GitlabInstance): Promise<T> {
   const origin = gitlabOrigin(url);
   if (!origin) throw new Error(`"${url}" is not a valid GitLab URL. Fix it in settings.`);
   const host = new URL(origin).host;
-  if (!(await chrome.permissions.contains({ origins: [`${origin}/*`] }))) {
+  if (!(await browser.permissions.contains({ origins: [`${origin}/*`] }))) {
     throw new Error(`No access to ${host}. Save the settings again to allow it.`);
   }
   let res;
@@ -44,28 +50,42 @@ async function gitlabGet(path, { url, token }) {
   if (res.status === 429) throw new Error(`${host} rate limit reached. Syncing resumes on its own.`);
   if (!res.ok) {
     let detail = '';
-    try { const body = await res.json(); detail = body.message ?? body.error ?? ''; } catch { /* non-JSON body */ }
+    try {
+      const body = (await res.json()) as { message?: string; error?: string };
+      detail = body.message ?? body.error ?? '';
+    } catch {
+      /* non-JSON body */
+    }
     throw new Error(`${host} returned ${res.status}${detail ? `: ${detail}` : '.'}`);
   }
   return res.json();
 }
 
-export async function getGitlabUser(instance) {
-  return gitlabGet('/user', instance);
+export async function getGitlabUser(instance: GitlabInstance) {
+  return gitlabGet<{ username: string }>('/user', instance);
 }
 
 // Like the GitHub search, one call covers every project the token can see.
-async function fetchMyMRs(instance, { includeDrafts }) {
-  const host = new URL(gitlabOrigin(instance.url)).host;
+interface MergeRequest {
+  references: { full: string };
+  web_url: string;
+  iid: number;
+  title: string;
+  draft?: boolean;
+  created_at: string;
+}
+
+async function fetchMyMRs(instance: GitlabInstance, { includeDrafts }: Settings) {
+  const host = new URL(gitlabOrigin(instance.url)!).host;
   const draft = includeDrafts ? '' : '&wip=no';
-  const prs = [];
+  const prs: PR[] = [];
   for (let page = 1; page <= 10; page++) {
-    const items = await gitlabGet(
+    const items = await gitlabGet<MergeRequest[]>(
       `/merge_requests?scope=created_by_me&state=opened${draft}&order_by=created_at&sort=asc&per_page=100&page=${page}`,
       instance,
     );
     for (const mr of items) {
-      const [path] = mr.references.full.split('!');
+      const path = mr.references.full.split('!')[0];
       prs.push({
         key: `${host}/${mr.references.full}`.toLowerCase(),
         url: mr.web_url,

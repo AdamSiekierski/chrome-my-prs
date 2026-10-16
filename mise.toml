@@ -1,0 +1,4 @@
+[tools]
+bun = "1.4.3"
+# Playwright's test runner (bun run e2e) runs on node.
+node = "24.22.0"

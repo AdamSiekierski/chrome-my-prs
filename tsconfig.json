@@ -1,0 +1,8 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    // Only the browser: keeps @types/bun (for tsconfig.tools.json) out of the extension's globals.
+    "types": []
+  },
+  "exclude": ["node_modules", ".output", "store", "e2e", "playwright.config.ts"]
+}
