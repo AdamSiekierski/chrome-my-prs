@@ -25,7 +25,7 @@ Private by design:
 Safe with your tabs:
 • A failed fetch never closes tabs. A network blip doesn't mean "you have no PRs".
 • The tab you're looking at is never closed out from under you.
-• Other tabs you drag into the group are left alone.
+• Other tabs in the group are never closed: left alone, or moved out of the group if you turn that on.
 
 What it does:
 • New PRs open as background tabs in the group. Merged and closed ones are removed.
