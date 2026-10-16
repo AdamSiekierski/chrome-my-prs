@@ -1,0 +1,8 @@
+{
+  // Scripts that run in bun/node rather than the browser: e2e tests, configs, store image script.
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "types": ["bun"]
+  },
+  "include": ["e2e", "store/shoot.ts", "playwright.config.ts"]
+}

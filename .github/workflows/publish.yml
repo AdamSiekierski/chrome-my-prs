@@ -1,43 +1,80 @@
-# GitHub release vX.Y.Z → Chrome Web Store. Setup: docs/publishing.md
-name: Publish to Chrome Web Store
+# GitHub release vX.Y.Z → Chrome Web Store and Firefox Add-ons. Setup: docs/publishing.md
+name: Publish
 
 on:
   release:
     types: [published]
 
 permissions:
-  contents: write # attach the zip to the release
+  contents: write # attach the zips to the release
+
+env:
+  TAG: ${{ github.event.release.tag_name }}
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
-  publish:
+  # Builds both zips once and attaches them to the release; the store jobs upload those exact files.
+  build:
     runs-on: ubuntu-latest
-    env:
-      TAG: ${{ github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
 
       - name: Check version
         run: |
-          version=$(jq -r .version manifest.json)
+          version=$(jq -r .version package.json)
           if [ "${TAG#v}" != "$version" ]; then
-            echo "::error::Release tag $TAG doesn't match manifest.json version $version. Bump manifest.json first."
+            echo "::error::Release tag $TAG doesn't match package.json version $version. Bump package.json first."
             exit 1
           fi
 
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+
       - name: Zip
-        run: zip -r extension.zip manifest.json *.js *.html *.css icons lib
+        run: |
+          bun run zip
+          bun run zip:firefox
+          mv .output/*-chrome.zip chrome.zip
+          mv .output/*-firefox.zip firefox.zip
+          mv .output/*-sources.zip firefox-sources.zip
 
-      - name: Attach zip to release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" extension.zip --clobber
+      - name: Attach zips to release
+        run: gh release upload "$TAG" chrome.zip firefox.zip firefox-sources.zip --clobber
 
+  chrome:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern chrome.zip
       - name: Upload and publish
         uses: mnao305/chrome-extension-upload@f549d5d654694a7722d6abfa64c97409ad5e64c1 # v7.0.0
         with:
-          file-path: extension.zip
+          file-path: chrome.zip
           extension-id: ${{ secrets.CWS_EXTENSION_ID }}
           publisher-id: ${{ secrets.CWS_PUBLISHER_ID }}
           client-id: ${{ secrets.CWS_CLIENT_ID }}
           client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
           refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
+
+  firefox:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+      FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+      - run: bun install --frozen-lockfile
+      - run: gh release download "$TAG" --pattern 'firefox*.zip'
+      # The add-on id is the gecko id in wxt.config.ts. Submitted for desktop Firefox only: Android has no tab groups.
+      - name: Upload and submit for review
+        run: |
+          if [ -z "$FIREFOX_JWT_ISSUER" ]; then
+            echo "::warning::FIREFOX_JWT_ISSUER isn't set, so this release wasn't sent to Firefox Add-ons. See docs/publishing.md."
+            exit 0
+          fi
+          bunx wxt submit \
+            --firefox-zip firefox.zip --firefox-sources-zip firefox-sources.zip \
+            --firefox-extension-id '@my-prs-tab-group' --firefox-compatibility firefox

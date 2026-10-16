@@ -1,0 +1,76 @@
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #1f2328;
+  --muted: #646d78;
+  --line: #e0e3e8;
+  --hover: #eceff3;
+  --danger: #c62828;
+  --group: #a142f4;
+  --radius-s: 4px;
+  --radius-m: 7px;
+  color-scheme: light dark;
+  font:
+    13px/1.45 ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI Variable Text',
+    'Segoe UI',
+    system-ui,
+    sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1d1f23;
+    --surface: #26292e;
+    --ink: #e5e7ea;
+    --muted: #9ba2ab;
+    --line: #363a41;
+    --hover: #2f3339;
+    --danger: #ff8a80;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+:focus-visible {
+  outline: 2px solid var(--group);
+  outline-offset: 2px;
+}
+.btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius-m);
+  padding: 6px 12px;
+}
+.btn:hover {
+  background: var(--hover);
+}
+.btn.primary {
+  background: var(--group);
+  border-color: var(--group);
+  color: #fff;
+  font-weight: 600;
+}
+.btn.primary:hover {
+  filter: brightness(1.08);
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

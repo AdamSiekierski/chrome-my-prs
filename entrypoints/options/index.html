@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="manifest.open_in_tab" content="true" />
+    <title>My PRs Tab Group settings</title>
+  </head>
+  <body>
+    <main class="page">
+      <header class="head">
+        <h1>My PRs Tab Group</h1>
+        <p>
+          Keeps one tab group filled with the open pull requests you authored on GitHub and GitLab. Merged and closed
+          PRs leave the group on the next sync.
+        </p>
+      </header>
+
+      <form id="form">
+        <section>
+          <h2>GitHub access</h2>
+          <label for="token">Personal access token</label>
+          <div class="inline">
+            <input
+              id="token"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="ghp_… or github_pat_…"
+            />
+            <button type="button" class="btn" id="reveal">Show</button>
+            <button type="button" class="btn" id="check">Check token</button>
+          </div>
+          <p class="hint" id="token-status" role="status"></p>
+          <p class="hint">
+            <a
+              href="https://github.com/settings/tokens/new?scopes=repo&amp;description=My%20PRs%20Tab%20Group"
+              target="_blank"
+              rel="noopener"
+              >Create a classic token</a
+            >
+            with the <code>repo</code> scope: it reaches every repo you can, private ones included. A
+            <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener"
+              >fine-grained token</a
+            >
+            works too: give it the repositories you work in, with Pull requests and Metadata set to read-only. If your
+            org uses SAML SSO, authorize the token for that org on GitHub, or its PRs won't show up.
+          </p>
+
+          <label>Or sign in with GitHub</label>
+          <div class="inline">
+            <button type="button" class="btn" id="signin">Sign in with GitHub</button>
+          </div>
+          <p class="hint" id="signin-status" role="status"></p>
+          <p class="hint">
+            No token to create: approve a code on github.com, where you're already signed in. But orgs that limit
+            third-party apps hide their PRs until an org owner approves the app.
+          </p>
+          <p class="hint">
+            Either way, the token is kept in this browser's local extension storage and is sent only to api.github.com.
+          </p>
+        </section>
+
+        <section>
+          <h2>GitLab instances</h2>
+          <div id="gitlab-list"></div>
+          <button type="button" class="btn" id="gitlab-add">Add GitLab instance</button>
+          <p class="hint">
+            gitlab.com (leave the URL empty) or your company's own GitLab, each with a personal access token with the
+            <code>read_api</code> scope. Your browser asks to allow access to each instance when you save. Each token is
+            kept in this browser and sent only to its own instance.
+          </p>
+        </section>
+
+        <section>
+          <h2>Tab group</h2>
+          <label for="groupTitle">Group name</label>
+          <input id="groupTitle" type="text" maxlength="40" />
+          <p class="hint">The extension finds its group by this name after the browser restarts, so keep it unique.</p>
+
+          <label class="check"><input id="groupByRepo" type="checkbox" /> One group per repository</label>
+          <p class="hint">
+            Each repo gets its own group, named <code>My PRs: repo</code> with your group name in front.
+          </p>
+
+          <label class="check"><input id="ungroupOthers" type="checkbox" /> Move other tabs out of the group</label>
+          <p class="hint">
+            Tabs that aren't PRs (a link opened from a PR, a tab you navigated away, one you dragged in) are moved next
+            to the group. They're never closed.
+          </p>
+
+          <fieldset>
+            <legend>Color</legend>
+            <div class="swatches" id="swatches"></div>
+          </fieldset>
+        </section>
+
+        <section>
+          <h2>Which pull requests</h2>
+          <label class="check"><input id="includeDrafts" type="checkbox" /> Include draft PRs</label>
+
+          <label for="extraQuery">Extra search filter</label>
+          <input id="extraQuery" type="text" spellcheck="false" placeholder="org:my-company -repo:me/dotfiles" />
+          <p class="hint">
+            GitHub only. Added to <code>is:pr is:open author:@me</code>. Any
+            <a
+              href="https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests"
+              target="_blank"
+              rel="noopener"
+              >GitHub search qualifier</a
+            >
+            works.
+          </p>
+
+          <label for="pollMinutes">Check every</label>
+          <div class="inline narrow">
+            <input id="pollMinutes" type="number" min="1" max="60" step="1" />
+            <span>minutes</span>
+          </div>
+        </section>
+
+        <div class="save-row">
+          <button type="submit" class="btn primary">Save changes</button>
+          <span id="saved" role="status"></span>
+        </div>
+      </form>
+    </main>
+    <template id="gitlab-row">
+      <div class="instance">
+        <label data-for="url">GitLab URL (empty for gitlab.com)</label>
+        <input data-field="url" type="url" spellcheck="false" placeholder="https://gitlab.com" />
+        <label data-for="token">Personal access token</label>
+        <div class="inline">
+          <input data-field="token" type="password" autocomplete="off" spellcheck="false" placeholder="glpat-…" />
+          <button type="button" class="btn" data-action="reveal">Show</button>
+          <button type="button" class="btn" data-action="check">Check token</button>
+          <button type="button" class="btn" data-action="remove">Remove</button>
+        </div>
+        <p class="hint" data-field="status" role="status"></p>
+        <p class="hint">
+          <a data-field="link" target="_blank" rel="noopener">Create a token</a> with the <code>read_api</code> scope.
+        </p>
+      </div>
+    </template>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

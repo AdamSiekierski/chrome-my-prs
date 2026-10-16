@@ -1,13 +1,15 @@
-# Chrome Web Store listing
+# Store listings
+
+Chrome Web Store first, Firefox Add-ons (AMO) below.
 
 Copy-paste source for the Developer Dashboard. Images are in this folder (`screenshot-*.png` are 1280×800,
 `promo-small.png` is the 440×280 small promo tile; the store icon is `icons/128.png`).
 
 ## Store listing
 
-**Summary** (from `manifest.json` `description`, max 132 chars)
+**Summary** (from the `description` in `wxt.config.ts`, max 132 chars)
 
-> Keeps a Chrome tab group open with every open GitHub pull request and GitLab merge request you authored. No tracking.
+> Keeps a tab group open with every open GitHub pull request and GitLab merge request you authored. No tracking.
 
 **Category:** Developer Tools · **Language:** English
 
@@ -50,21 +52,49 @@ Privacy policy: https://github.com/AdamSiekierski/chrome-my-prs/blob/master/PRIV
 
 **Permission justifications**
 
-| Permission | Justification |
-| --- | --- |
-| `tabs` | Open PR pages as tabs, close tabs of merged/closed PRs, and read tab URLs to tell which PRs already have a tab. |
-| `tabGroups` | Create, find, name and color the tab group that holds the PR tabs. |
-| `storage` | Keep the user's GitHub token and settings locally, and sync the list of hidden PRs across the user's browsers. |
-| `alarms` | Re-check GitHub on the interval the user picks (default every 5 minutes). |
-| `contextMenus` | Add "Hide from My PRs group" when right-clicking a PR page or link. |
-| Host `https://api.github.com/*` | Search the user's open pull requests with their token. |
-| Host `https://github.com/login/*` | Run GitHub's device sign-in flow for "Sign in with GitHub". |
+| Permission                                | Justification                                                                                                                                                                          |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tabs`                                    | Open PR pages as tabs, close tabs of merged/closed PRs, and read tab URLs to tell which PRs already have a tab.                                                                        |
+| `tabGroups`                               | Create, find, name and color the tab group that holds the PR tabs.                                                                                                                     |
+| `storage`                                 | Keep the user's GitHub token and settings locally, and sync the list of hidden PRs across the user's browsers.                                                                         |
+| `alarms`                                  | Re-check GitHub on the interval the user picks (default every 5 minutes).                                                                                                              |
+| `contextMenus`                            | Add "Hide from My PRs group" when right-clicking a PR page or link.                                                                                                                    |
+| Host `https://api.github.com/*`           | Search the user's open pull requests with their token.                                                                                                                                 |
+| Host `https://github.com/login/*`         | Run GitHub's device sign-in flow for "Sign in with GitHub".                                                                                                                            |
 | Optional host `https://*/*`, `http://*/*` | Only requested if the user sets up GitLab, and only for the GitLab instances they add (gitlab.com or self-hosted, at any address), to list their open merge requests with their token. |
 
 **Remote code:** No, I am not using remote code.
 
-**Data usage:** tick *Authentication information* (the GitHub and GitLab tokens) and *Website content* (PR titles and URLs
+**Data usage:** tick _Authentication information_ (the GitHub and GitLab tokens) and _Website content_ (PR titles and URLs
 fetched from GitHub and GitLab). Certify all three disclosures (not sold, not used for unrelated purposes, not used for
 creditworthiness).
 
 **Privacy policy URL:** `https://github.com/AdamSiekierski/chrome-my-prs/blob/master/PRIVACY.md`
+
+## Firefox Add-ons (AMO)
+
+Paste into the [Developer Hub](https://addons.mozilla.org/developers/) listing. Use the same images.
+
+**Name:** My PRs Tab Group · **Summary:** the `description` from `wxt.config.ts` (same as Chrome's summary above)
+
+**Categories:** Tabs, Other · **Platform:** Firefox only
+
+**Description:** the Chrome description above, with "Chrome tab group" → "tab group" and "Hides sync across your
+browsers" → "Hides sync across your Firefox installs (Firefox Sync)". Needs Firefox 140 or later.
+
+**Privacy policy:** paste the text of [`PRIVACY.md`](../PRIVACY.md) (AMO takes the policy text, not a link).
+
+**Data collection** (declared in the manifest, shown at install): _Authentication information_. The tokens are sent to
+GitHub and the user's GitLab instances to list their PRs. Nothing goes to the developer.
+
+**Notes to reviewer:**
+
+```
+Built with WXT (Vite) from TypeScript; build steps are in SOURCE_CODE_REVIEW.md in the sources zip
+(mise install && bun install --frozen-lockfile && bun run zip:firefox). No remote code.
+
+To test without a GitHub account's PRs: settings → paste any GitHub token with repo scope, or use
+"Sign in with GitHub". The extension then opens your open PRs as tabs in a tab group named "My PRs".
+Network requests go only to api.github.com, github.com/login (device sign-in) and GitLab instances the user adds
+(optional host permission, requested per instance).
+```

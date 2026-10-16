@@ -1,25 +1,32 @@
 # My PRs Tab Group
 
-A Chrome extension that keeps one tab group filled with every open GitHub pull request and GitLab merge request you authored.
+A Chrome and Firefox extension that keeps one tab group filled with every open GitHub pull request and GitLab merge request you authored.
 
 ![The popup listing open PRs next to the PR tab group](store/screenshot-popup.png)
 
 ## Install
 
-**Chrome Web Store:** *listing in review, link coming soon.*
+**Chrome Web Store:** _listing in review, link coming soon._
+**Firefox Add-ons:** _coming soon_ (Firefox 140 or later).
 
 ### From source
 
+Needs [mise](https://mise.jdx.dev) (it installs the pinned [bun](https://bun.sh)):
+
 ```sh
-git clone https://github.com/AdamSiekierski/chrome-my-prs.git
+git clone https://github.com/AdamSiekierski/chrome-my-prs.git && cd chrome-my-prs
+mise install && bun install && bun run build
 ```
 
 1. Open `chrome://extensions` and turn on **Developer mode**.
-2. **Load unpacked** → pick the `chrome-my-prs` folder. The settings page opens on first install.
+2. **Load unpacked** → pick `chrome-my-prs/.output/chrome-mv3`. The settings page opens on first install.
 3. [Create a classic token with `repo` scope](https://github.com/settings/tokens/new?scopes=repo&description=My%20PRs%20Tab%20Group),
    paste it, press **Check token**, then **Save changes**.
 
-To update: `git pull`, then press the reload icon on the extension's card in `chrome://extensions`.
+To update: `git pull && bun install && bun run build`, then press the reload icon on the extension's card in `chrome://extensions`.
+
+Firefox: `bun run build:firefox`, then `about:debugging` → _This Firefox_ → _Load Temporary Add-on_ → pick
+`.output/firefox-mv3/manifest.json`. It stays until Firefox restarts.
 
 A token reaches every repo you can, so it's the recommended way. A
 [fine-grained token](https://github.com/settings/personal-access-tokens/new) works too: Pull requests + Metadata
@@ -46,7 +53,7 @@ and gives access back for ones you remove. GitHub and GitLab are independent; se
   created with its first PR and gone once its last PR tab closes.
 - **Move other tabs out of the group** (off by default, in settings): a tab in the group that isn't a PR page is
   ungrouped as soon as it leaves the PR (and on every sync), so the group holds only PRs.
-- **Hide**: the Hide button in the popup, or right-click a PR page/link → *Hide from My PRs group*.
+- **Hide**: the Hide button in the popup, or right-click a PR page/link → _Hide from My PRs group_.
   Hides sync across machines through your Chrome account and are forgotten 30 days after the PR closes.
 - Clicking a PR in the popup jumps to its tab; clicking the group label opens the group.
 - Opening a PR that already has a tab in the group (a link, a bookmark, typing the URL) switches to that tab instead of
@@ -76,16 +83,23 @@ No server, no analytics. The token stays in this browser and goes only to GitHub
 
 ## Releasing
 
-Publishing a GitHub release `vX.Y.Z` ships it to the Chrome Web Store.
+Publishing a GitHub release `vX.Y.Z` ships it to the Chrome Web Store and Firefox Add-ons.
 Setup and steps: [docs/publishing.md](docs/publishing.md).
 
-## Files
+## Development
 
-- `background.js`: sync loop, tab group reconciliation, context menu
-- `lib/shared.js`: settings, hides, the list of active sources (adapters)
-- `lib/github.js`, `lib/gitlab.js`: one adapter per source: fetch your open PRs/MRs, recognize their URLs
-- `popup.*`, `options.*`, `ui.css`: UI
-- `store/`: Web Store listing text and images
+Built with [WXT](https://wxt.dev) and TypeScript. `bun run dev` (or `dev:firefox`) opens the browser with the
+extension loaded and reloads on change; `bun run check` runs oxlint, oxfmt, tsc and the vitest unit tests;
+`bun run e2e` runs the built extension in real Chromium and Firefox against a fake GitHub (see
+[the e2e skill](.claude/skills/e2e-testing/SKILL.md)). CI runs all of them.
+
+- `entrypoints/background.ts`: sync loop, tab group reconciliation, context menu
+- `utils/shared.ts`: settings, hides, the list of active sources (adapters)
+- `utils/github.ts`, `utils/gitlab.ts`: one adapter per source: fetch your open PRs/MRs, recognize their URLs
+- `entrypoints/popup/`, `entrypoints/options/`, `assets/ui.css`: UI
+- `wxt.config.ts`: manifest fields and permissions; the version comes from `package.json`
+- `e2e/`: end-to-end tests
+- `store/`: store listing text and images (`bun run store:images` regenerates the images)
 
 ## License
 
