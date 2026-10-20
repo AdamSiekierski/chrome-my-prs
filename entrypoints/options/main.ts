@@ -34,6 +34,7 @@ async function load() {
   $('token').value = s.token;
   $('groupTitle').value = s.groupTitle;
   $('groupByRepo').checked = s.groupByRepo;
+  $('groupByStack').checked = s.groupByStack;
   $('ungroupOthers').checked = s.ungroupOthers;
   $('includeDrafts').checked = s.includeDrafts;
   $('extraQuery').value = s.extraQuery;
@@ -197,6 +198,7 @@ form.addEventListener('submit', async (e) => {
     groupTitle: $('groupTitle').value.trim() || DEFAULTS.groupTitle,
     groupColor: form.querySelector<HTMLInputElement>('input[name="groupColor"]:checked')?.value ?? DEFAULTS.groupColor,
     groupByRepo: $('groupByRepo').checked,
+    groupByStack: $('groupByStack').checked,
     ungroupOthers: $('ungroupOthers').checked,
     includeDrafts: $('includeDrafts').checked,
     extraQuery: $('extraQuery').value.trim(),

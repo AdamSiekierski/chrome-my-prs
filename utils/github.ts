@@ -15,6 +15,7 @@ export function githubAdapter(settings: Settings): Adapter {
     },
     async fetch() {
       const [prs, blockedOrgs] = await Promise.all([fetchMyPRs(settings), findBlockedOrgs(settings.token)]);
+      if (settings.groupByStack) await addStacks(prs, settings.token);
       return { prs, blockedOrgs };
     },
   };
@@ -151,8 +152,11 @@ interface SearchResponse {
     title: string;
     draft?: boolean;
     created_at: string;
+    node_id: string;
   }[];
 }
+
+type GithubPR = PR & { nodeId: string };
 
 async function fetchMyPRs({ token, includeDrafts, extraQuery }: Settings) {
   const terms = ['is:pr', 'is:open', 'author:@me', 'archived:false'];
@@ -160,7 +164,7 @@ async function fetchMyPRs({ token, includeDrafts, extraQuery }: Settings) {
   if (extraQuery?.trim()) terms.push(extraQuery.trim());
   const q = encodeURIComponent(terms.join(' '));
 
-  const prs: PR[] = [];
+  const prs: GithubPR[] = [];
   for (let page = 1; page <= 10; page++) {
     const data = await get<SearchResponse>(
       `/search/issues?q=${q}&sort=created&order=asc&per_page=100&page=${page}`,
@@ -177,9 +181,40 @@ async function fetchMyPRs({ token, includeDrafts, extraQuery }: Settings) {
         repo: `${owner}/${repo}`,
         draft: Boolean(item.draft),
         createdAt: item.created_at,
+        nodeId: item.node_id,
       });
     }
     if (data.items.length < 100 || prs.length >= data.total_count) break;
   }
   return prs;
+}
+
+// Search results don't say which stack a PR is in, so look the PRs up by node id, 100 per GraphQL call.
+async function addStacks(prs: GithubPR[], token: string) {
+  const query = 'query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequest { id stack { number } } } }';
+  for (let i = 0; i < prs.length; i += 100) {
+    const batch = prs.slice(i, i + 100);
+    let res;
+    try {
+      res = await fetch(`${API}/graphql`, {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({ query, variables: { ids: batch.map((p) => p.nodeId) } }),
+        cache: 'no-store',
+      });
+    } catch {
+      throw new Error("Couldn't reach GitHub. Check your connection.");
+    }
+    if (!res.ok) throw new Error(await errorMessage(res));
+    const { data, errors } = (await res.json()) as {
+      data?: { nodes: ({ id: string; stack: { number: number } | null } | null)[] };
+      errors?: { message: string }[];
+    };
+    if (errors?.length) throw new Error(`GitHub couldn't look up stacks: ${errors[0]!.message}`);
+    const stacks = new Map(data?.nodes.filter((n) => n?.stack).map((n) => [n!.id, n!.stack!.number]));
+    for (const pr of batch) {
+      const stack = stacks.get(pr.nodeId);
+      if (stack != null) pr.stack = stack;
+    }
+  }
 }

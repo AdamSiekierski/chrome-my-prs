@@ -13,6 +13,7 @@ export type Settings = {
   groupTitle: string;
   groupColor: Color;
   groupByRepo: boolean;
+  groupByStack: boolean;
   ungroupOthers: boolean;
   pollMinutes: number;
   includeDrafts: boolean;
@@ -26,6 +27,7 @@ export const DEFAULTS: Readonly<Settings> = Object.freeze({
   groupTitle: 'My PRs',
   groupColor: 'purple',
   groupByRepo: false,
+  groupByStack: false,
   ungroupOthers: false,
   pollMinutes: 5,
   includeDrafts: true,
@@ -75,6 +77,7 @@ export interface PR {
   repo: string;
   draft: boolean;
   createdAt: string;
+  stack?: number; // GitHub stack number, only fetched with "group by stack"
 }
 export interface Adapter {
   name: string;

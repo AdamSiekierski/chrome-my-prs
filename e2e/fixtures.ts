@@ -9,6 +9,7 @@ export interface FakePR {
   number: number;
   title?: string;
   draft?: boolean;
+  stack?: number; // GitHub stack number
 }
 
 export const prUrl = (pr: FakePR) => `https://github.com/${pr.repo}/pull/${pr.number}`;
@@ -57,7 +58,7 @@ export const test = base.extend<{ ext: Extension }>({
       const state = { prs: [] as FakePR[], status: 200 };
       Object.assign(globalThis, { fakeGitHub: state });
       // Everything here runs inside the service worker, so it can't use helpers from this file.
-      globalThis.fetch = (async (input: RequestInfo | URL) => {
+      globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = new URL(String(input));
         // oxlint-disable-next-line unicorn/consistent-function-scoping -- serialized into the worker
         const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -72,7 +73,15 @@ export const test = base.extend<{ ext: Extension }>({
               title: pr.title ?? `PR ${pr.number}`,
               draft: pr.draft ?? false,
               created_at: '2026-01-01T00:00:00Z',
+              node_id: `${pr.repo}#${pr.number}`,
             })),
+          });
+        }
+        if (url.pathname === '/graphql') {
+          const { ids } = JSON.parse(String(init?.body)).variables as { ids: string[] };
+          const stackOf = (nodeId: string) => state.prs.find((pr) => `${pr.repo}#${pr.number}` === nodeId)?.stack;
+          return json({
+            data: { nodes: ids.map((n) => ({ id: n, stack: stackOf(n) ? { number: stackOf(n) } : null })) },
           });
         }
         if (url.pathname === '/user') return json({ login: 'octo' });

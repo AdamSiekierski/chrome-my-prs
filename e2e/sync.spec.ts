@@ -92,6 +92,25 @@ test('one group per repository', async ({ ext }) => {
   expect((await ext.groups()).map((g) => g.title).toSorted()).toEqual(['My PRs: api', 'My PRs: web']);
 });
 
+test('one group per stack, next to the other groups', async ({ ext }) => {
+  await ext.github({ prs: [{ ...API_1, stack: 4 }, { ...API_2, stack: 4 }, WEB_7] });
+  await ext.setSettings({ token: 'fake', groupByStack: true });
+  await ext.sync();
+
+  expect(await ext.groupedTabs()).toEqual(
+    expect.arrayContaining([
+      { url: prUrl(API_1), group: 'My PRs: api stack #4' },
+      { url: prUrl(API_2), group: 'My PRs: api stack #4' },
+      { url: prUrl(WEB_7), group: 'My PRs' },
+    ]),
+  );
+  expect((await ext.groups()).map((g) => g.title).toSorted()).toEqual(['My PRs', 'My PRs: api stack #4']);
+
+  await ext.setSettings({ groupByStack: false });
+  await ext.sync();
+  expect((await ext.groups()).map((g) => g.title)).toEqual(['My PRs']);
+});
+
 test('opening a PR that already has a tab switches to that tab instead', async ({ ext }) => {
   await ext.github({ prs: [API_1] });
   await ext.setSettings({ token: 'fake' });
