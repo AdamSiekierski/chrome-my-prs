@@ -88,18 +88,22 @@ a {
 fieldset {
   border: 0;
   padding: 0;
-  margin: 0;
+  margin: 18px 0 0;
 }
 .check {
   display: flex;
   gap: 8px;
   align-items: center;
-  font-weight: 400;
-  margin: 0 0 4px;
+  margin: 18px 0 0;
 }
 .check input {
   accent-color: var(--group);
   margin: 0;
+}
+/* Indent a checkbox's hint to line up with its label text. */
+.check + .hint {
+  margin-top: 2px;
+  padding-left: 21px;
 }
 .swatches {
   display: flex;

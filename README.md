@@ -51,6 +51,9 @@ and gives access back for ones you remove. GitHub and GitLab are independent; se
   A PR you already have open in an ungrouped tab is moved into the group instead of opened again.
 - **One group per repository** (off by default, in settings): each repo gets a group named `<group name>: <repo>`,
   created with its first PR and gone once its last PR tab closes.
+- **One group per stack** (off by default, in settings, GitHub only): PRs in a
+  [stack](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs) get their own group named
+  `<group name>: <repo> stack #<n>`, next to the other groups. Costs one extra GitHub API call per sync.
 - **Move other tabs out of the group** (off by default, in settings): a tab in the group that isn't a PR page is
   ungrouped as soon as it leaves the PR (and on every sync), so the group holds only PRs.
 - **Hide**: the Hide button in the popup, or right-click a PR page/link → _Hide from My PRs group_.

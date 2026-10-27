@@ -98,9 +98,12 @@ async function doSync({ refetch }: { refetch: boolean }) {
 // ---------- Tab group reconciliation ----------
 
 // With "group by repository" each repo gets "<group name>: <repo>"; otherwise every PR shares one group.
+// With "group by stack" a stacked PR goes to "<group name>: <repo> stack #<n>" instead.
 // ponytail: repo name only, so same-named repos from different owners share a group.
 function titleFor(settings: Settings, pr: PR) {
-  return settings.groupByRepo ? `${settings.groupTitle}: ${pr.repo.split('/').pop()}` : settings.groupTitle;
+  const repo = pr.repo.split('/').pop();
+  if (settings.groupByStack && pr.stack != null) return `${settings.groupTitle}: ${repo} stack #${pr.stack}`;
+  return settings.groupByRepo ? `${settings.groupTitle}: ${repo}` : settings.groupTitle;
 }
 
 async function findGroups(settings: Settings) {
@@ -390,7 +393,7 @@ export default defineBackground(() => {
     const keys = Object.keys(changes);
     if (keys.includes('pollMinutes')) scheduleAlarm();
     if (keys.some((k) => ['token', 'gitlabInstances'].includes(k))) setupMenu();
-    if (keys.some((k) => ['token', 'includeDrafts', 'extraQuery', 'gitlabInstances'].includes(k))) {
+    if (keys.some((k) => ['token', 'includeDrafts', 'extraQuery', 'gitlabInstances', 'groupByStack'].includes(k))) {
       requestSync({ refetch: true });
     } else if (keys.some((k) => ['groupTitle', 'groupColor', 'groupByRepo', 'ungroupOthers', 'enabled'].includes(k))) {
       requestSync();

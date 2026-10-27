@@ -60,6 +60,63 @@ describe('fetch', () => {
     expect(q).toBe('is:pr is:open author:@me archived:false draft:false org:acme');
   });
 
+  it('looks up stacks in one GraphQL call when grouping by stack', async () => {
+    const bodies: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.includes('/search/issues')) {
+          return json({ total_count: 2, items: [1, 2].map((n) => ({ ...item(n), node_id: `PR_${n}` })) });
+        }
+        if (url.endsWith('/graphql')) {
+          bodies.push(String(init?.body));
+          return json({
+            data: {
+              nodes: [
+                { id: 'PR_1', stack: { number: 9 } },
+                { id: 'PR_2', stack: null },
+              ],
+            },
+          });
+        }
+        return json([]);
+      }),
+    );
+
+    const { prs } = await adapter({ groupByStack: true }).fetch();
+
+    expect(prs.map((p) => p.stack)).toEqual([9, undefined]);
+    expect(bodies).toHaveLength(1);
+    expect(JSON.parse(bodies[0]!).variables).toEqual({ ids: ['PR_1', 'PR_2'] });
+  });
+
+  it('skips the stack lookup when not grouping by stack', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        urls.push(url);
+        return url.includes('/search/issues') ? json({ total_count: 1, items: [item(1)] }) : json([]);
+      }),
+    );
+
+    await adapter().fetch();
+
+    expect(urls.some((u) => u.endsWith('/graphql'))).toBe(false);
+  });
+
+  it('turns a GraphQL error into a readable error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('/search/issues')) return json({ total_count: 1, items: [{ ...item(1), node_id: 'PR_1' }] });
+        if (url.endsWith('/graphql')) return json({ errors: [{ message: 'Something broke' }] });
+        return json([]);
+      }),
+    );
+    await expect(adapter({ groupByStack: true }).fetch()).rejects.toThrow('Something broke');
+  });
+
   it('turns a 401 into a readable error', async () => {
     vi.stubGlobal(
       'fetch',
