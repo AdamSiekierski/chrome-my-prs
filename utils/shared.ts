@@ -78,7 +78,17 @@ export interface PR {
   draft: boolean;
   createdAt: string;
   stack?: number; // GitHub stack number, only fetched with "group by stack"
+  status?: PrStatus; // unset for drafts and when the source couldn't tell
 }
+export type PrStatus =
+  | 'conflicts'
+  | 'ci-failing'
+  | 'changes-requested'
+  | 'behind'
+  | 'ci-running'
+  | 'needs-review'
+  | 'ready'
+  | 'approved';
 export interface Adapter {
   name: string;
   urlPatterns: string[];
