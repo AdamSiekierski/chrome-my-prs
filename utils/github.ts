@@ -208,7 +208,7 @@ export function githubStatus(node: PrNode): PrStatus | undefined {
   if (checks === 'PENDING' || checks === 'EXPECTED') return 'ci-running';
   if (review === 'REVIEW_REQUIRED') return 'needs-review';
   if (merge === 'CLEAN') return 'ready';
-  if (review === 'APPROVED') return 'approved';
+  if (review === 'APPROVED' && merge && merge !== 'UNKNOWN') return 'approved';
   return undefined;
 }
 
@@ -239,8 +239,11 @@ async function addDetails(prs: GithubPR[], settings: Settings) {
   }
 }
 
-// Field-level errors (e.g. a fine-grained token without Checks access) come back next to partial data:
-// usable unless the caller needs every field.
+// Status fields: a fine-grained token without Checks access gets an error on these, next to otherwise usable data.
+const STATUS_FIELDS = new Set(['reviewDecision', 'mergeStateStatus', 'commits']);
+
+// Field-level errors come back next to partial data. Without stacks any data is usable; with stacks
+// only errors confined to status fields are.
 async function graphqlNodes(query: string, batch: GithubPR[], token: string, strict: boolean) {
   let res;
   try {
@@ -256,8 +259,9 @@ async function graphqlNodes(query: string, batch: GithubPR[], token: string, str
   if (!res.ok) throw new Error(await errorMessage(res));
   const { data, errors } = (await res.json()) as {
     data?: { nodes: (PrNode | null)[] } | null;
-    errors?: { message: string }[];
+    errors?: { message: string; path?: (string | number)[] }[];
   };
-  if (errors?.length && (strict || !data)) throw new Error(`GitHub couldn't look up PR details: ${errors[0]!.message}`);
+  const fatal = errors?.find((e) => !data || (strict && !e.path?.some((p) => STATUS_FIELDS.has(String(p)))));
+  if (fatal) throw new Error(`GitHub couldn't look up PR details: ${fatal.message}`);
   return data?.nodes ?? [];
 }

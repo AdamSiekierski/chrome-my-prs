@@ -168,6 +168,53 @@ describe('fetch', () => {
     expect(prs.map((p) => p.status)).toEqual(['approved', undefined]);
   });
 
+  it('keeps stacks and syncs when only status fields error while grouping by stack', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('/search/issues')) return json({ total_count: 1, items: [{ ...item(1), node_id: 'PR_1' }] });
+        if (url.endsWith('/graphql')) {
+          return json({
+            data: {
+              nodes: [
+                {
+                  id: 'PR_1',
+                  stack: { number: 9 },
+                  mergeStateStatus: 'BLOCKED',
+                  reviewDecision: 'APPROVED',
+                  commits: null,
+                },
+              ],
+            },
+            errors: [{ message: 'Resource not accessible by personal access token', path: ['nodes', 0, 'commits'] }],
+          });
+        }
+        return json([]);
+      }),
+    );
+
+    const { prs } = await adapter({ groupByStack: true }).fetch();
+
+    expect(prs.map((p) => [p.stack, p.status])).toEqual([[9, 'approved']]);
+  });
+
+  it('fails the sync when the stack field itself errors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('/search/issues')) return json({ total_count: 1, items: [{ ...item(1), node_id: 'PR_1' }] });
+        if (url.endsWith('/graphql')) {
+          return json({
+            data: { nodes: [{ id: 'PR_1', stack: null, mergeStateStatus: 'CLEAN' }] },
+            errors: [{ message: 'Stacks unavailable', path: ['nodes', 0, 'stack'] }],
+          });
+        }
+        return json([]);
+      }),
+    );
+    await expect(adapter({ groupByStack: true }).fetch()).rejects.toThrow('Stacks unavailable');
+  });
+
   it('turns a GraphQL error into a readable error', async () => {
     vi.stubGlobal(
       'fetch',
@@ -214,6 +261,7 @@ describe('githubStatus', () => {
     [{ mergeStateStatus: 'CLEAN', reviewDecision: null, commits: rollup(null) }, 'ready'],
     [{ mergeStateStatus: 'BLOCKED', reviewDecision: 'APPROVED' }, 'approved'],
     [{ mergeStateStatus: 'UNKNOWN' }, undefined],
+    [{ mergeStateStatus: 'UNKNOWN', reviewDecision: 'APPROVED' }, undefined],
     [{}, undefined],
   ])('%j → %s', (node, expected) => expect(githubStatus(node)).toBe(expected));
 });
