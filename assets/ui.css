@@ -6,6 +6,8 @@
   --line: #e0e3e8;
   --hover: #eceff3;
   --danger: #c62828;
+  --warn: #9a6700;
+  --ok: #1a7f37;
   --group: #a142f4;
   --radius-s: 4px;
   --radius-m: 7px;
@@ -30,6 +32,8 @@
     --line: #363a41;
     --hover: #2f3339;
     --danger: #ff8a80;
+    --warn: #e3b341;
+    --ok: #6fdd8b;
   }
 }
 * {

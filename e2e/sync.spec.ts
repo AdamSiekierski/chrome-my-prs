@@ -124,3 +124,22 @@ test('opening a PR that already has a tab switches to that tab instead', async (
   const active = await ext.sw.evaluate(async () => (await chrome.tabs.query({ active: true }))[0]?.groupId);
   expect(active).not.toBe(-1);
 });
+
+test('the popup labels each PR with its status, except drafts', async ({ ext }) => {
+  await ext.github({
+    prs: [
+      { ...API_1, mergeState: 'CLEAN', checks: 'SUCCESS' },
+      { ...API_2, mergeState: 'BLOCKED', checks: 'FAILURE' },
+      { ...WEB_7, mergeState: 'CLEAN' },
+    ],
+  });
+  await ext.setSettings({ token: 'fake' });
+  await ext.sync();
+
+  const popup = await ext.open('popup.html');
+  const label = (title: string) => popup.locator('#list .row', { hasText: title }).locator('.pr-status');
+  await expect(label(API_1.title!)).toHaveText('Ready');
+  await expect(label(API_1.title!)).toHaveAttribute('title', 'Ready to merge');
+  await expect(label(API_2.title!)).toHaveText('CI failing');
+  await expect(label(WEB_7.title!)).toHaveCount(0);
+});

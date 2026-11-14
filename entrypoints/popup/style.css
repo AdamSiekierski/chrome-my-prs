@@ -126,6 +126,27 @@ main {
   border-radius: var(--radius-s);
   padding: 0 5px;
 }
+.pr-status {
+  flex: none;
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-s);
+  padding: 0 5px;
+}
+.pr-status.conflicts,
+.pr-status.ci-failing,
+.pr-status.changes-requested {
+  color: var(--danger);
+}
+.pr-status.behind {
+  color: var(--warn);
+}
+.pr-status.ready,
+.pr-status.approved {
+  color: var(--ok);
+}
 .row-action {
   flex: none;
   border: 0;
