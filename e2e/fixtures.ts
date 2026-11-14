@@ -10,6 +10,9 @@ export interface FakePR {
   title?: string;
   draft?: boolean;
   stack?: number; // GitHub stack number
+  review?: string; // GraphQL reviewDecision, e.g. "APPROVED"
+  mergeState?: string; // GraphQL mergeStateStatus, e.g. "CLEAN"
+  checks?: string; // GraphQL statusCheckRollup state, e.g. "FAILURE"
 }
 
 export const prUrl = (pr: FakePR) => `https://github.com/${pr.repo}/pull/${pr.number}`;
@@ -79,10 +82,17 @@ export const test = base.extend<{ ext: Extension }>({
         }
         if (url.pathname === '/graphql') {
           const { ids } = JSON.parse(String(init?.body)).variables as { ids: string[] };
-          const stackOf = (nodeId: string) => state.prs.find((pr) => `${pr.repo}#${pr.number}` === nodeId)?.stack;
-          return json({
-            data: { nodes: ids.map((n) => ({ id: n, stack: stackOf(n) ? { number: stackOf(n) } : null })) },
-          });
+          const nodeOf = (nodeId: string) => {
+            const pr = state.prs.find((p) => `${p.repo}#${p.number}` === nodeId);
+            return {
+              id: nodeId,
+              stack: pr?.stack ? { number: pr.stack } : null,
+              reviewDecision: pr?.review ?? null,
+              mergeStateStatus: pr?.mergeState ?? 'UNKNOWN',
+              commits: { nodes: [{ commit: { statusCheckRollup: pr?.checks ? { state: pr.checks } : null } }] },
+            };
+          };
+          return json({ data: { nodes: ids.map(nodeOf) } });
         }
         if (url.pathname === '/user') return json({ login: 'octo' });
         if (url.pathname.startsWith('/user/memberships/orgs')) return json([]);

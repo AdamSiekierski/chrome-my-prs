@@ -1,7 +1,7 @@
 // GitLab adapter, one per configured instance (gitlab.com or self-hosted).
 // Any instance works, so host access is an optional permission the settings page requests per instance.
 import { browser } from 'wxt/browser';
-import type { Adapter, GitlabInstance, PR, Settings } from './shared';
+import type { Adapter, GitlabInstance, PR, PrStatus, Settings } from './shared';
 
 // A blank URL means gitlab.com.
 // ponytail: origin only, so a GitLab served under a sub-path (example.com/gitlab) isn't supported.
@@ -72,7 +72,23 @@ interface MergeRequest {
   iid: number;
   title: string;
   draft?: boolean;
+  detailed_merge_status?: string;
   created_at: string;
+}
+
+// GitLab already ranks the blockers in detailed_merge_status; other values (draft_status, discussions_not_resolved…) get no label.
+const STATUS = new Map<string | undefined, PrStatus>([
+  ['conflict', 'conflicts'],
+  ['ci_must_pass', 'ci-failing'],
+  ['requested_changes', 'changes-requested'],
+  ['need_rebase', 'behind'],
+  ['ci_still_running', 'ci-running'],
+  ['not_approved', 'needs-review'],
+  ['mergeable', 'ready'],
+]);
+
+export function gitlabStatus(detailedMergeStatus: string | undefined): PrStatus | undefined {
+  return STATUS.get(detailedMergeStatus);
 }
 
 async function fetchMyMRs(instance: GitlabInstance, { includeDrafts }: Settings) {
@@ -95,6 +111,7 @@ async function fetchMyMRs(instance: GitlabInstance, { includeDrafts }: Settings)
         repo: `${host}/${path}`,
         draft: Boolean(mr.draft),
         createdAt: mr.created_at,
+        status: mr.draft ? undefined : gitlabStatus(mr.detailed_merge_status),
       });
     }
     if (items.length < 100) break;

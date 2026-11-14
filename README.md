@@ -30,7 +30,7 @@ Firefox: `bun run build:firefox`, then `about:debugging` → _This Firefox_ → 
 
 A token reaches every repo you can, so it's the recommended way. A
 [fine-grained token](https://github.com/settings/personal-access-tokens/new) works too: Pull requests + Metadata
-read-only on the repos you work in. If your org enforces SAML SSO, authorize the token for it, or those PRs
+read-only on the repos you work in, plus Checks + Commit statuses read-only for the CI labels. If your org enforces SAML SSO, authorize the token for it, or those PRs
 silently won't appear in search.
 
 Alternatively, **Sign in with GitHub** skips the token: approve a code on github.com and you're done. But orgs
@@ -53,9 +53,13 @@ and gives access back for ones you remove. GitHub and GitLab are independent; se
   created with its first PR and gone once its last PR tab closes.
 - **One group per stack** (off by default, in settings, GitHub only): PRs in a
   [stack](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs) get their own group named
-  `<group name>: <repo> stack #<n>`, next to the other groups. Costs one extra GitHub API call per sync.
+  `<group name>: <repo> stack #<n>`, next to the other groups.
 - **Move other tabs out of the group** (off by default, in settings): a tab in the group that isn't a PR page is
   ungrouped as soon as it leaves the PR (and on every sync), so the group holds only PRs.
+- **Status labels** in the popup show the most pressing thing about each PR: Conflicts, CI failing,
+  Changes requested, Behind, CI running, Needs review, Ready or Approved (hover for details). Drafts get none.
+  On GitHub this costs one GraphQL call per sync (per 100 PRs, shared with the stack lookup); GitLab sends it with the
+  MR list. A failed status lookup only hides the labels, it never stops the sync.
 - **Hide**: the Hide button in the popup, or right-click a PR page/link → _Hide from My PRs group_.
   Hides sync across machines through your Chrome account and are forgotten 30 days after the PR closes.
 - Clicking a PR in the popup jumps to its tab; clicking the group label opens the group.

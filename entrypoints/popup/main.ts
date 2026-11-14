@@ -11,6 +11,7 @@ import {
   timeAgo,
   type Message,
   type PR,
+  type PrStatus,
 } from '@/utils/shared';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -31,12 +32,28 @@ async function toggleHidden(key: string, hide: boolean) {
   await setHidden(hidden); // the service worker reacts and updates the group
 }
 
+const STATUS: Record<PrStatus, { label: string; tip: string }> = {
+  conflicts: { label: 'Conflicts', tip: 'Has merge conflicts with the base branch' },
+  'ci-failing': { label: 'CI failing', tip: 'Some checks failed' },
+  'changes-requested': { label: 'Changes requested', tip: 'A reviewer requested changes' },
+  behind: { label: 'Behind', tip: 'Needs an update from the base branch' },
+  'ci-running': { label: 'CI running', tip: 'Checks are still running' },
+  'needs-review': { label: 'Needs review', tip: 'Waiting for an approving review' },
+  ready: { label: 'Ready', tip: 'Ready to merge' },
+  approved: { label: 'Approved', tip: 'Approved, but not mergeable yet' },
+};
+
 function prRow(pr: PR, isHidden: boolean) {
   const row = el('div', 'row');
   const main = el('button', 'row-main');
   main.title = isHidden ? `Open ${pr.title}` : `Go to ${pr.title}`;
   main.append(el('span', 'num', pr.ref ?? `#${pr.number}`), el('span', 'title', pr.title));
   if (pr.draft) main.append(el('span', 'tag', 'Draft'));
+  if (pr.status) {
+    const status = el('span', `pr-status ${pr.status}`, STATUS[pr.status].label);
+    status.title = STATUS[pr.status].tip;
+    main.append(status);
+  }
   main.addEventListener('click', async () => {
     if (isHidden) await browser.tabs.create({ url: pr.url });
     else await send({ type: 'focus-pr', key: pr.key, url: pr.url });

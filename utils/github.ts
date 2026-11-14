@@ -1,5 +1,5 @@
 // GitHub adapter: github.com only, one token.
-import type { Adapter, PR, Settings } from './shared';
+import type { Adapter, PR, PrStatus, Settings } from './shared';
 
 // Matches the PR page and any sub-page (/files, /commits, ?w=1, #discussion…), so a tab
 // you navigated within the PR still counts as that PR's tab.
@@ -15,7 +15,7 @@ export function githubAdapter(settings: Settings): Adapter {
     },
     async fetch() {
       const [prs, blockedOrgs] = await Promise.all([fetchMyPRs(settings), findBlockedOrgs(settings.token)]);
-      if (settings.groupByStack) await addStacks(prs, settings.token);
+      await addDetails(prs, settings);
       return { prs, blockedOrgs };
     },
   };
@@ -189,32 +189,79 @@ async function fetchMyPRs({ token, includeDrafts, extraQuery }: Settings) {
   return prs;
 }
 
-// Search results don't say which stack a PR is in, so look the PRs up by node id, 100 per GraphQL call.
-async function addStacks(prs: GithubPR[], token: string) {
-  const query = 'query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequest { id stack { number } } } }';
+interface PrNode {
+  id?: string;
+  stack?: { number: number } | null;
+  reviewDecision?: string | null;
+  mergeStateStatus?: string | null;
+  commits?: { nodes: { commit: { statusCheckRollup: { state: string } | null } }[] } | null;
+}
+
+// The most pressing thing about a PR, problems first. Unset when GitHub is still computing (UNKNOWN) or says nothing.
+export function githubStatus(node: PrNode): PrStatus | undefined {
+  const checks = node.commits?.nodes[0]?.commit.statusCheckRollup?.state;
+  const { mergeStateStatus: merge, reviewDecision: review } = node;
+  if (merge === 'DIRTY') return 'conflicts';
+  if (checks === 'FAILURE' || checks === 'ERROR') return 'ci-failing';
+  if (review === 'CHANGES_REQUESTED') return 'changes-requested';
+  if (merge === 'BEHIND') return 'behind';
+  if (checks === 'PENDING' || checks === 'EXPECTED') return 'ci-running';
+  if (review === 'REVIEW_REQUIRED') return 'needs-review';
+  if (merge === 'CLEAN') return 'ready';
+  if (review === 'APPROVED' && merge && merge !== 'UNKNOWN') return 'approved';
+  return undefined;
+}
+
+// Search results carry neither stacks nor review/CI/merge state, so look the PRs up by node id, 100 per GraphQL call.
+// Stacks decide where tabs go, so a failed stack lookup fails the sync. Statuses only label the popup:
+// without stacks, a failure (or a token that can't read checks) just leaves them unset.
+async function addDetails(prs: GithubPR[], settings: Settings) {
+  const fields = `id reviewDecision mergeStateStatus commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }${
+    settings.groupByStack ? ' stack { number }' : ''
+  }`;
+  const query = `query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequest { ${fields} } } }`;
   for (let i = 0; i < prs.length; i += 100) {
     const batch = prs.slice(i, i + 100);
-    let res;
+    let nodes: (PrNode | null)[];
     try {
-      res = await fetch(`${API}/graphql`, {
-        method: 'POST',
-        headers: headers(token),
-        body: JSON.stringify({ query, variables: { ids: batch.map((p) => p.nodeId) } }),
-        cache: 'no-store',
-      });
-    } catch {
-      throw new Error("Couldn't reach GitHub. Check your connection.");
+      nodes = await graphqlNodes(query, batch, settings.token, settings.groupByStack);
+    } catch (e) {
+      if (settings.groupByStack) throw e;
+      continue;
     }
-    if (!res.ok) throw new Error(await errorMessage(res));
-    const { data, errors } = (await res.json()) as {
-      data?: { nodes: ({ id: string; stack: { number: number } | null } | null)[] };
-      errors?: { message: string }[];
-    };
-    if (errors?.length) throw new Error(`GitHub couldn't look up stacks: ${errors[0]!.message}`);
-    const stacks = new Map(data?.nodes.filter((n) => n?.stack).map((n) => [n!.id, n!.stack!.number]));
+    const byId = new Map(nodes.filter((n) => n?.id).map((n) => [n!.id!, n!]));
     for (const pr of batch) {
-      const stack = stacks.get(pr.nodeId);
-      if (stack != null) pr.stack = stack;
+      const node = byId.get(pr.nodeId);
+      if (!node) continue;
+      if (node.stack) pr.stack = node.stack.number;
+      if (!pr.draft) pr.status = githubStatus(node);
     }
   }
+}
+
+// Status fields: a fine-grained token without Checks access gets an error on these, next to otherwise usable data.
+const STATUS_FIELDS = new Set(['reviewDecision', 'mergeStateStatus', 'commits']);
+
+// Field-level errors come back next to partial data. Without stacks any data is usable; with stacks
+// only errors confined to status fields are.
+async function graphqlNodes(query: string, batch: GithubPR[], token: string, strict: boolean) {
+  let res;
+  try {
+    res = await fetch(`${API}/graphql`, {
+      method: 'POST',
+      headers: headers(token),
+      body: JSON.stringify({ query, variables: { ids: batch.map((p) => p.nodeId) } }),
+      cache: 'no-store',
+    });
+  } catch {
+    throw new Error("Couldn't reach GitHub. Check your connection.");
+  }
+  if (!res.ok) throw new Error(await errorMessage(res));
+  const { data, errors } = (await res.json()) as {
+    data?: { nodes: (PrNode | null)[] } | null;
+    errors?: { message: string; path?: (string | number)[] }[];
+  };
+  const fatal = errors?.find((e) => !data || (strict && !e.path?.some((p) => STATUS_FIELDS.has(String(p)))));
+  if (fatal) throw new Error(`GitHub couldn't look up PR details: ${fatal.message}`);
+  return data?.nodes ?? [];
 }

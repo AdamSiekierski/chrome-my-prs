@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { githubAdapter } from './github';
+import { githubAdapter, githubStatus } from './github';
 import { DEFAULTS } from './shared';
 
 const adapter = (extra = {}) => githubAdapter({ ...DEFAULTS, token: 'tok', ...extra });
@@ -90,19 +90,129 @@ describe('fetch', () => {
     expect(JSON.parse(bodies[0]!).variables).toEqual({ ids: ['PR_1', 'PR_2'] });
   });
 
-  it('skips the stack lookup when not grouping by stack', async () => {
-    const urls: string[] = [];
+  it('adds statuses from one GraphQL call without asking for stacks', async () => {
+    const bodies: string[] = [];
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
-        urls.push(url);
-        return url.includes('/search/issues') ? json({ total_count: 1, items: [item(1)] }) : json([]);
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.includes('/search/issues')) {
+          return json({
+            total_count: 2,
+            items: [
+              { ...item(1), node_id: 'PR_1' },
+              { ...item(2), node_id: 'PR_2', draft: true },
+            ],
+          });
+        }
+        if (url.endsWith('/graphql')) {
+          bodies.push(String(init?.body));
+          return json({
+            data: {
+              nodes: [
+                { id: 'PR_1', mergeStateStatus: 'CLEAN' },
+                { id: 'PR_2', mergeStateStatus: 'CLEAN' },
+              ],
+            },
+          });
+        }
+        return json([]);
       }),
     );
 
-    await adapter().fetch();
+    const { prs } = await adapter().fetch();
 
-    expect(urls.some((u) => u.endsWith('/graphql'))).toBe(false);
+    expect(prs.map((p) => p.status)).toEqual(['ready', undefined]);
+    expect(bodies).toHaveLength(1);
+    expect(JSON.parse(bodies[0]!).query).not.toContain('stack');
+  });
+
+  it.each([
+    ['an HTTP error', () => json({ message: 'boom' }, 500)],
+    ['a network failure', () => Promise.reject(new TypeError('Failed to fetch'))],
+    ['a GraphQL error', () => json({ errors: [{ message: 'Resource not accessible' }] })],
+  ])('keeps syncing without statuses after %s when not grouping by stack', async (_, graphql) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('/search/issues')) return json({ total_count: 1, items: [{ ...item(1), node_id: 'PR_1' }] });
+        if (url.endsWith('/graphql')) return graphql();
+        return json([]);
+      }),
+    );
+
+    const { prs } = await adapter().fetch();
+
+    expect(prs).toHaveLength(1);
+    expect(prs[0]!.status).toBeUndefined();
+  });
+
+  it('uses partial GraphQL data when some fields error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('/search/issues')) {
+          return json({ total_count: 2, items: [1, 2].map((n) => ({ ...item(n), node_id: `PR_${n}` })) });
+        }
+        if (url.endsWith('/graphql')) {
+          return json({
+            data: { nodes: [{ id: 'PR_1', reviewDecision: 'APPROVED', mergeStateStatus: 'BLOCKED' }, null] },
+            errors: [{ message: 'Resource not accessible by personal access token' }],
+          });
+        }
+        return json([]);
+      }),
+    );
+
+    const { prs } = await adapter().fetch();
+
+    expect(prs.map((p) => p.status)).toEqual(['approved', undefined]);
+  });
+
+  it('keeps stacks and syncs when only status fields error while grouping by stack', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('/search/issues')) return json({ total_count: 1, items: [{ ...item(1), node_id: 'PR_1' }] });
+        if (url.endsWith('/graphql')) {
+          return json({
+            data: {
+              nodes: [
+                {
+                  id: 'PR_1',
+                  stack: { number: 9 },
+                  mergeStateStatus: 'BLOCKED',
+                  reviewDecision: 'APPROVED',
+                  commits: null,
+                },
+              ],
+            },
+            errors: [{ message: 'Resource not accessible by personal access token', path: ['nodes', 0, 'commits'] }],
+          });
+        }
+        return json([]);
+      }),
+    );
+
+    const { prs } = await adapter({ groupByStack: true }).fetch();
+
+    expect(prs.map((p) => [p.stack, p.status])).toEqual([[9, 'approved']]);
+  });
+
+  it('fails the sync when the stack field itself errors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('/search/issues')) return json({ total_count: 1, items: [{ ...item(1), node_id: 'PR_1' }] });
+        if (url.endsWith('/graphql')) {
+          return json({
+            data: { nodes: [{ id: 'PR_1', stack: null, mergeStateStatus: 'CLEAN' }] },
+            errors: [{ message: 'Stacks unavailable', path: ['nodes', 0, 'stack'] }],
+          });
+        }
+        return json([]);
+      }),
+    );
+    await expect(adapter({ groupByStack: true }).fetch()).rejects.toThrow('Stacks unavailable');
   });
 
   it('turns a GraphQL error into a readable error', async () => {
@@ -132,4 +242,26 @@ describe('fetch', () => {
     );
     await expect(adapter().fetch()).rejects.toThrow("Couldn't reach GitHub");
   });
+});
+
+const rollup = (state: string | null) => ({
+  nodes: [{ commit: { statusCheckRollup: state ? { state } : null } }],
+});
+
+describe('githubStatus', () => {
+  it.each([
+    [{ mergeStateStatus: 'DIRTY', reviewDecision: 'APPROVED', commits: rollup('FAILURE') }, 'conflicts'],
+    [{ mergeStateStatus: 'CLEAN', commits: rollup('FAILURE') }, 'ci-failing'],
+    [{ mergeStateStatus: 'BLOCKED', commits: rollup('ERROR') }, 'ci-failing'],
+    [{ mergeStateStatus: 'BEHIND', reviewDecision: 'CHANGES_REQUESTED' }, 'changes-requested'],
+    [{ mergeStateStatus: 'BEHIND', commits: rollup('PENDING') }, 'behind'],
+    [{ mergeStateStatus: 'BLOCKED', reviewDecision: 'REVIEW_REQUIRED', commits: rollup('PENDING') }, 'ci-running'],
+    [{ mergeStateStatus: 'BLOCKED', commits: rollup('EXPECTED') }, 'ci-running'],
+    [{ mergeStateStatus: 'BLOCKED', reviewDecision: 'REVIEW_REQUIRED', commits: rollup('SUCCESS') }, 'needs-review'],
+    [{ mergeStateStatus: 'CLEAN', reviewDecision: null, commits: rollup(null) }, 'ready'],
+    [{ mergeStateStatus: 'BLOCKED', reviewDecision: 'APPROVED' }, 'approved'],
+    [{ mergeStateStatus: 'UNKNOWN' }, undefined],
+    [{ mergeStateStatus: 'UNKNOWN', reviewDecision: 'APPROVED' }, undefined],
+    [{}, undefined],
+  ])('%j → %s', (node, expected) => expect(githubStatus(node)).toBe(expected));
 });
