@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
-import { gitlabAdapter, gitlabOrigin } from './gitlab';
+import { gitlabAdapter, gitlabOrigin, gitlabStatus } from './gitlab';
 import { DEFAULTS } from './shared';
 
 const adapter = (url = 'https://gitlab.example.com') => gitlabAdapter({ url, token: 'tok' }, DEFAULTS);
@@ -25,6 +25,18 @@ it.each([
   ['not a url', null],
 ])('gitlabOrigin(%j) → %j', (input, expected) => expect(gitlabOrigin(input)).toBe(expected));
 
+it.each([
+  ['conflict', 'conflicts'],
+  ['ci_must_pass', 'ci-failing'],
+  ['requested_changes', 'changes-requested'],
+  ['need_rebase', 'behind'],
+  ['ci_still_running', 'ci-running'],
+  ['not_approved', 'needs-review'],
+  ['mergeable', 'ready'],
+  ['discussions_not_resolved', undefined],
+  [undefined, undefined],
+])('gitlabStatus(%j) → %j', (input, expected) => expect(gitlabStatus(input)).toBe(expected));
+
 describe('keyFromUrl', () => {
   const key = adapter().keyFromUrl;
   it.each([
@@ -48,6 +60,15 @@ describe('fetch', () => {
           iid: 3,
           title: 'MR',
           draft: true,
+          detailed_merge_status: 'mergeable',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        {
+          references: { full: 'group/sub/project!4' },
+          web_url: 'https://gitlab.example.com/group/sub/project/-/merge_requests/4',
+          iid: 4,
+          title: 'MR',
+          detailed_merge_status: 'not_approved',
           created_at: '2026-01-01T00:00:00Z',
         },
       ]),
@@ -62,7 +83,9 @@ describe('fetch', () => {
         repo: 'gitlab.example.com/group/sub/project',
         ref: '!3',
         draft: true,
+        status: undefined,
       }),
+      expect.objectContaining({ key: 'gitlab.example.com/group/sub/project!4', status: 'needs-review' }),
     ]);
     expect(fetch).toHaveBeenCalledWith(
       expect.stringMatching(
